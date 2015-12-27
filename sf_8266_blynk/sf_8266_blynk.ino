@@ -18,6 +18,7 @@
 #include <BlynkSimpleEsp8266.h>
 #include <NTPClient.h>
 #include <OneWire.h>
+#include <Servo.h>
 #include <SimpleTimer.h>
 #include <TimeLib.h>
 
@@ -46,6 +47,12 @@ float expAverageTemperatureF = 65.0;
 //NTPClient timeClient(TIMEZONE * 3600);
 NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 1 * MINUTES*MSECS);
 
+// Servo
+#define SERVO_PIN 0
+Servo myservo;  // create servo object to control a servo
+
+
+// Forward declarations
 void repeatMe();
 void playTone(int tone, int duration);
 long int getTime();
@@ -66,7 +73,7 @@ void setup()
   timer.setInterval(1000, repeatMe);
   timeClient.update();
   setSyncProvider(getTime);
-
+  myservo.attach(SERVO_PIN);  // attaches the servo on pin 9 to the servo object
 }
 
 void loop()
@@ -99,6 +106,15 @@ BLYNK_WRITE(V2) //Button Widget is writing to pin V2
 BLYNK_READ(V1) // Serve data to Temperature Guage
 {
   Blynk.virtualWrite(V1, expAverageTemperatureF);
+}
+
+// Blynk Servo Control
+BLYNK_WRITE(V4) //Slide Widget is writing to pin V4
+{
+  int val = param.asInt();
+  Serial.printf("slider V4 = %u\n", val);
+  //val = map(val, 0, 1023, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
+  myservo.write(val);                  // sets the servo position according to the scaled value
 }
 
 #define T_OFFSET_C 5.3
