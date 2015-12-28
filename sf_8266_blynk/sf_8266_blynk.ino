@@ -30,7 +30,6 @@ OneWire ds(DS18S20_PIN);
 // Private wifi settings and Blynk auth token are in this file
 #include "wifi_settings.h"
 
-const int temperaturePin = A0;
 #define ledPin 5
 #define speakerPin 4
 
@@ -133,13 +132,7 @@ BLYNK_WRITE(V4) //Slide Widget is writing to pin V4
 void updateTemperature() {
   float voltage, degreesC, degreesF;
   const float alpha = 0.2;
-#define ONEWIRE
-#ifdef ONEWIRE
   degreesC = retrieveTemperature();
-#else
-  voltage = analogRead(temperaturePin) / 1023.0;
-  degreesC = (voltage - 0.5) * 100.0 + 5.0 / 9.0 * T_OFFSET_C;
-#endif
   degreesF = degreesC * (9.0 / 5.0) + 32.0;
   expAverageTemperatureF = degreesF * alpha + expAverageTemperatureF * ( 1.0 - alpha);
   //Blynk.virtualWrite(V1, degreesF);
