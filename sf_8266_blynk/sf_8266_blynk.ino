@@ -94,11 +94,17 @@ BLYNK_WRITE(V0) //Slider Widget is writing to pin V0
   sliderData = param.asInt();
 }
 
-BLYNK_WRITE(V3) //Slider Widget is writing to pin V0
+BLYNK_WRITE(V3) //Button Widget is writing to pin V3
 {
   if (param.asInt() == 1) {
     playTone(1915, 200);
   }
+}
+
+BLYNK_WRITE(V5) //Joystick Widget is writing to pin V3
+{
+  int mytone = param.asInt();
+  playTone(mytone + 100, 20);
 }
 
 BLYNK_WRITE(V2) //Button Widget is writing to pin V2
@@ -110,7 +116,7 @@ BLYNK_WRITE(V2) //Button Widget is writing to pin V2
   }
 }
 
-BLYNK_READ(V1) // Serve data to Temperature Guage
+BLYNK_READ(V1) // Serve data to Temperature Gauge
 {
   Blynk.virtualWrite(V1, expAverageTemperatureF);
 }
