@@ -63,17 +63,24 @@ void setup()
 {
   Serial.begin(115200);
   Blynk.begin(auth, WIFI_SSID, WIFI_KEY);
+
+  // Initialize the LED pin
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, 0);
+
+  // Initialize the speaker pin
   pinMode(speakerPin, OUTPUT);
 
+  // Wait until connected to Blynk
   while (Blynk.connect() == false) {
-    // Wait until connected
+    Serial.print(".");
+    delay(500);
   }
+
   timer.setInterval(1000, repeatMe);
   timeClient.update();
   setSyncProvider(getTime);
-  myservo.attach(SERVO_PIN);  // attaches the servo on pin 9 to the servo object
+  myservo.attach(SERVO_PIN);  // attaches the servo on pin SERVO_PIN to the servo object
 }
 
 void loop()
@@ -113,7 +120,6 @@ BLYNK_WRITE(V4) //Slide Widget is writing to pin V4
 {
   int val = param.asInt();
   Serial.printf("slider V4 = %u\n", val);
-  //val = map(val, 0, 1023, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
   myservo.write(val);                  // sets the servo position according to the scaled value
 }
 
