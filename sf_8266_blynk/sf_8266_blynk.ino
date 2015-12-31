@@ -8,6 +8,8 @@
   Blynk community: http://community.blynk.cc
   Social networks: http://www.fb.com/blynkapp
   http://twitter.com/blynk_app
+  http://community.blynk.cc/t/continuing-loop-while-reconnecting/620/4
+  https://learn.sparkfun.com/tutorials/esp8266-thing-hookup-guide/hardware-overview
 
   Change WiFi ssid, pass, and Blynk auth token to run :)
 
