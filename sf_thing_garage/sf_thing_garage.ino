@@ -22,6 +22,8 @@
 #include <SimpleTimer.h>
 #include <TimeLib.h>
 
+#include "Garage.h"
+
 
 // Private wifi settings and Blynk auth token are in this file
 #include "wifi_settings.h"
@@ -39,6 +41,8 @@ float expAverageTemperatureF = 65.0;
 #define MINUTES 60
 //NTPClient timeClient(TIMEZONE * 3600);
 NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 1 * MINUTES*MSECS);
+
+Garage garage(1, 4);
 
 // Forward declarations
 void repeatMe();
@@ -67,6 +71,10 @@ BLYNK_WRITE(V4) //Slide Widget is writing to pin V4
   Serial.printf("slider V4 = %u\n", val);
 }
 
+// Blynk LED Control
+void setLED(int state){
+ Blynk.virtualWrite(1, state); 
+}
 
 void repeatMe() {
   //timeClient.update();
@@ -103,51 +111,6 @@ void digitalClockDisplay() {
 time_t time_open;
 time_t time_closed;
 
-void garage_open(){
-	led1.on();
-	time_open = now();
-}
-
-void garage_closed(){
-	led1.off();
-	time_closed = now();
-	//XXX make string with time closed and send to blynk display
-}
-
-#define OPEN 1
-#define CLOSED 2
-#define OPEN_WDT 4
-
-#define ERR_FSM 1
-
-int state, next_state;
-void fsm(int event){
-	next_state = state;
-	switch (state){
-	case CLOSED:
-		if (event == OPEN){
-			garage_open();
-			next_state = OPEN;
-		}
-		break;
-	case OPEN:
-		if (event == CLOSED) {
-			garage_open();
-			next_state = CLOSED;
-		} else if (event == OPEN_WDT) {
-			long elapsed_time_open = now() - time_open;
-			//update_elapsed_time_open(elapsed_time_open);
-			//reset_open_wdt();
-		}
-		break;
-	default:
-		//error(ERR_FSM);
-		break;
-	}
-
-	state = next_state;
-}
-
 void setup()
 {
   Serial.begin(115200);
@@ -172,5 +135,6 @@ void loop()
 {
   Blynk.run();
   timer.run();
+  garage.run();
 }
 
