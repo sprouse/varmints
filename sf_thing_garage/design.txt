@@ -1,0 +1,18 @@
+== ESP8266 Garage Door Sensor
+
+== Requirements
+1. When garage door gpio is asserted:
+	• Exit low power mode
+	• Connect to wifi
+	• Update Blynk status that garage door is open 
+	• Set time for XX minutes
+	• Enter low power mode
+	• When timer expires, send notification that door is open for more than XX minutes
+
+2. When garage door is de-asserted:
+	• Exit low power mode
+	• Connect to wifi
+	• Update Blynk status that garage door is closed 
+	• Set timer for YY minutes
+	• Enter low power mode
+	• When timer expires, repeat from step 2.
