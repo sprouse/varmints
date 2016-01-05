@@ -72,8 +72,12 @@ BLYNK_WRITE(V4) //Slide Widget is writing to pin V4
 }
 
 // Blynk LED Control
-void setLED(int state){
- Blynk.virtualWrite(1, state); 
+void setLED(int state) {
+  Blynk.virtualWrite(1, state);
+}
+
+void open_wdt() {
+  garage.fsm(OPEN_WDT);
 }
 
 void repeatMe() {
