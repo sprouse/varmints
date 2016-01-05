@@ -6,7 +6,7 @@ Garage::Garage(int led_vpin, int relay_pin) {
   _relay_pin = relay_pin;
   _led_vpin = led_vpin;
 
-  _wdt_id = _timer.setTimeout(10 * 60 * 1000L, open_wdt);
+  _wdt_id = _timer.setTimeout(10 * 60 * 1000L, gateOpenWDT);
 }
 
 void Garage::garage_open() {

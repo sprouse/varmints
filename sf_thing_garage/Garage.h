@@ -20,7 +20,7 @@
 
 extern void setLED(int state);
 extern SimpleTimer timer;
-extern void open_wdt();
+extern void gateOpenWDT();
 
 class Garage
 {

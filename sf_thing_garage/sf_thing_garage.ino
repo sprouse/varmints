@@ -76,7 +76,7 @@ void setLED(int state) {
   Blynk.virtualWrite(1, state);
 }
 
-void open_wdt() {
+void gateOpenWDT() {
   garage.fsm(OPEN_WDT);
 }
 
