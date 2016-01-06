@@ -18,10 +18,14 @@
 #define OFF 0
 #define ON 1
 
+#define LCD_0 4
+#define LCD_1 5
+
 extern void setLED(int state);
 extern void setTime(int vpin);
 extern SimpleTimer timer;
 extern void gateOpenWDT();
+extern void iosNotify(char *s);
 
 class Garage
 {

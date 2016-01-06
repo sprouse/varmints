@@ -12,16 +12,16 @@ Garage::Garage(int led_vpin, int relay_pin) {
 void Garage::garage_open() {
   setLED(ON);
   _time_opened = now();
-  Serial.printf("Set WDT");
+  Serial.printf("Set WDT\n");
   _wdt_id = timer.setTimeout(10 * 1000L, gateOpenWDT);
-  setTime(3);
+  setTime(LCD_0);
 }
 
 void Garage::garage_closed() {
   setLED(OFF);
   _time_closed = now();
   timer.deleteTimer(_wdt_id);
-  setTime(4);
+  setTime(LCD_1);
   //XXX make string with time closed and send to blynk display
 }
 
@@ -64,9 +64,12 @@ void Garage::fsm(int event) {
         garage_closed();
         next_state = CLOSED;
       } else if (event == OPEN_WDT) {
+        char buf[256];
         long elapsed_time_open = now() - _time_opened;
-        //update_elapsed_time_open(elapsed_time_open);
-        _wdt_id = timer.setTimeout(10*1000L, gateOpenWDT);  // reset and restart the timer
+        Serial.printf("duration: %ld\n", elapsed_time_open);
+        sprintf(buf, "Garage door is open %d secs", elapsed_time_open);
+        iosNotify(buf);
+        _wdt_id = timer.setTimeout(10 * 1000L, gateOpenWDT); // reset and restart the timer
       }
       break;
     default:
