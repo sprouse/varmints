@@ -19,6 +19,7 @@
 #define ON 1
 
 extern void setLED(int state);
+extern void setTime(int vpin);
 extern SimpleTimer timer;
 extern void gateOpenWDT();
 
@@ -34,7 +35,6 @@ class Garage
     int _wdt_id;
     int _event;
 
-    SimpleTimer _timer;
   public:
     Garage(int led_pin, int sensor_pin);
     void run();

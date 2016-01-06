@@ -49,34 +49,30 @@ void repeatMe();
 long int getTime();
 void digitalClockDisplay();
 
+int dummy_sensor;
 
-BLYNK_WRITE(V2) //Button Widget is writing to pin V2
+// Blynk Button simulates garage open or closed.
+BLYNK_WRITE(V1) //Button Widget is writing to pin V2
 {
-  int button = param.asInt();
-  Serial.printf("button V2 = %u\n", button);
-  if (button == 1) {
-    Blynk.tweet("Hello, World!");
-  }
-}
-
-BLYNK_READ(V1) // Serve data to Temperature Gauge
-{
-  Blynk.virtualWrite(V1, expAverageTemperatureF);
-}
-
-// Blynk Servo Control
-BLYNK_WRITE(V4) //Slide Widget is writing to pin V4
-{
-  int val = param.asInt();
-  Serial.printf("slider V4 = %u\n", val);
+  dummy_sensor = param.asInt();
+  Serial.println("=======");
+  Serial.printf("button V1 = %u\n", dummy_sensor);
 }
 
 // Blynk LED Control
 void setLED(int state) {
-  Blynk.virtualWrite(1, state);
+  Blynk.virtualWrite(0, state);
+}
+
+void setTime(int vpin){
+  char buf[64];
+  sprintf(buf, "%02d:%02d:%02d", hour(), minute(), second());
+  Serial.printf("LCD pin %d\n", vpin);
+  Blynk.virtualWrite(vpin, buf);
 }
 
 void gateOpenWDT() {
+  Serial.printf("WDT!\n");
   garage.fsm(OPEN_WDT);
 }
 
@@ -130,7 +126,7 @@ void setup()
     delay(500);
   }
 
-  timer.setInterval(1000, repeatMe);
+  //timer.setInterval(1000, repeatMe);
   timeClient.update();
   setSyncProvider(getTime);
 }
