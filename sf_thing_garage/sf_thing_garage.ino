@@ -35,7 +35,7 @@ WidgetLED led1(1);
 SimpleTimer timer;
 float expAverageTemperatureF = 65.0;
 
-#define TIMEZONE -7
+#define TIMEZONE -8
 #define MSECS 1000L
 #define HOURS 3600
 #define MINUTES 60
