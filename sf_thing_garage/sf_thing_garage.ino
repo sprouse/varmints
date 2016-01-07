@@ -57,8 +57,6 @@ int dummy_sensor;
 #define NOTIFY_BUTTON V3
 
 
-
-
 // Blynk Button simulates garage open or closed.
 BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
 {
@@ -69,14 +67,21 @@ BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
 
 // Blynk LED Control
 void setLED(int state) {
+  Serial.printf("Led = %d\n", state);
   Blynk.virtualWrite(STATUS_LED, state);
+}
+
+void setLCD(int vpin, char *buf) {
+  static char lcd_buf[2][64];
+  strcpy(lcd_buf[vpin], buf);
+  Blynk.virtualWrite(vpin, lcd_buf[vpin]);
 }
 
 void setTime(int vpin) {
   char buf[64];
-  sprintf(buf, "%d.%d %02d:%02d", month(), day(), hour(), minute());
+  sprintf(buf, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
   Serial.printf("LCD pin %s\n", buf);
-  Blynk.virtualWrite(vpin, buf);
+  setLCD(vpin, buf);
 }
 
 void gateOpenWDT() {
@@ -126,6 +131,7 @@ time_t time_closed;
 void setup()
 {
   Serial.begin(115200);
+  Serial.print("\nStarting\n");
   Blynk.begin(auth, WIFI_SSID, WIFI_KEY);
 
   // Initialize the LED pin

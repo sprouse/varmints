@@ -3,6 +3,7 @@
 
 Garage::Garage(int led_vpin, int relay_pin) {
   _state = CLOSED;
+  //setLED(OFF);
   _relay_pin = relay_pin;
   _led_vpin = led_vpin;
 
@@ -13,7 +14,7 @@ void Garage::garage_open() {
   setLED(ON);
   _time_opened = now();
   Serial.printf("Set WDT\n");
-  _wdt_id = timer.setTimeout(10 * 1000L, gateOpenWDT);
+  _wdt_id = timer.setTimer(100000L, gateOpenWDT, 3); //Give three notifications
   setTime(LCD_0);
 }
 
@@ -69,7 +70,7 @@ void Garage::fsm(int event) {
         Serial.printf("duration: %ld\n", elapsed_time_open);
         sprintf(buf, "Garage door is open %d secs", elapsed_time_open);
         iosNotify(buf);
-        _wdt_id = timer.setTimeout(10 * 1000L, gateOpenWDT); // reset and restart the timer
+        //_wdt_id = timer.setTimeout(10 * 1000L, gateOpenWDT); // reset and restart the timer
       }
       break;
     default:
