@@ -18,10 +18,11 @@
 #define OFF 0
 #define ON 1
 
+// LCD VPins
 #define LCD_0 4
 #define LCD_1 5
 
-#define GARAGE_OPEN_TIMEOUT_MIN 3
+#define GARAGE_OPEN_TIMEOUT_MIN 10
 
 extern void setLED(int state);
 extern void setTime(int vpin);

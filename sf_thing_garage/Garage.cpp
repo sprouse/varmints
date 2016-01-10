@@ -16,7 +16,7 @@ void Garage::garage_open() {
   setLED(ON);
   _time_opened = now();
   Serial.printf("Set WDT\n");
-  _wdt_id = timer.setTimer(GARAGE_OPEN_TIMEOUT_MIN * 1000L, gateOpenWDT, 3); //Give three notifications
+  _wdt_id = timer.setTimer(GARAGE_OPEN_TIMEOUT_MIN * 60 * 1000L, gateOpenWDT, 3); //Give three notifications
   setTime(LCD_0);
   timer.pprev(2);
 }
