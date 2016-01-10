@@ -7,8 +7,8 @@
 #define Garage_h
 
 #include "Arduino.h"
-#include <SimpleTimer.h>
 #include <TimeLib.h>
+#include <assert.h>
 
 #define OPEN 1
 #define CLOSED 2
@@ -21,10 +21,10 @@
 #define LCD_0 4
 #define LCD_1 5
 
+#define GARAGE_OPEN_TIMEOUT_MIN 3
+
 extern void setLED(int state);
 extern void setTime(int vpin);
-extern SimpleTimer timer;
-extern void gateOpenWDT();
 extern void iosNotify(char *s);
 
 class Garage
@@ -40,7 +40,7 @@ class Garage
     int _event;
 
   public:
-    Garage(int led_pin, int sensor_pin);
+    Garage(int sensor_pin);
     void run();
     void fsm(int event);
 

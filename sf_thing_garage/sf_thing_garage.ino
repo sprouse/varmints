@@ -19,7 +19,7 @@
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
 #include <NTPClient.h>
-#include <SimpleTimer.h>
+#include "SimpleTimer.h"
 #include <TimeLib.h>
 
 #include "Garage.h"
@@ -31,6 +31,7 @@
 WidgetLED led1(1);
 
 #define ledPin 5
+#define RELAY_PIN 13
 
 SimpleTimer timer;
 float expAverageTemperatureF = 65.0;
@@ -42,7 +43,7 @@ float expAverageTemperatureF = 65.0;
 //NTPClient timeClient(TIMEZONE * 3600);
 NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 1 * MINUTES*MSECS);
 
-Garage garage(1, 4);
+Garage garage(RELAY_PIN);
 
 // Forward declarations
 void repeatMe();
@@ -67,20 +68,18 @@ BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
 
 // Blynk LED Control
 void setLED(int state) {
-  Serial.printf("Led = %d\n", state);
   Blynk.virtualWrite(STATUS_LED, state);
+  digitalWrite(ledPin, state);
 }
 
 void setLCD(int vpin, char *buf) {
-  static char lcd_buf[2][64];
-  strcpy(lcd_buf[vpin], buf);
-  Blynk.virtualWrite(vpin, lcd_buf[vpin]);
+  timer.pprev(20);
+  Blynk.virtualWrite(vpin, buf);
 }
 
 void setTime(int vpin) {
   char buf[64];
-  sprintf(buf, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
-  Serial.printf("LCD pin %s\n", buf);
+  snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
   setLCD(vpin, buf);
 }
 
@@ -91,6 +90,7 @@ void gateOpenWDT() {
 
 void iosNotify(char *s) {
   Blynk.notify(s);
+  Blynk.email("sprouses@gmail.com", "Subject: Garage Open", "Garage just opened...");
 }
 
 void repeatMe() {
@@ -138,6 +138,9 @@ void setup()
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, 0);
 
+  // Initialize the relay input pin
+  pinMode(RELAY_PIN, INPUT_PULLUP);
+
   // Wait until connected to Blynk
   while (Blynk.connect() == false) {
     Serial.print(".");
@@ -151,8 +154,13 @@ void setup()
 
 void loop()
 {
+  timer.pprev(10);
+
   Blynk.run();
+  timer.pprev(11);
   timer.run();
+  timer.pprev(12);
+
   garage.run();
 }
 
