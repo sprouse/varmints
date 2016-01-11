@@ -4,7 +4,7 @@
 extern SimpleTimer timer;
 extern void gate_open_wdt_expired();
 
-Garage::Garage(int relay_pin) {
+Garage::Garage(uint8_t relay_pin) {
   _state = CLOSED;
   //setLED(OFF);
   _relay_pin = relay_pin;
@@ -12,7 +12,7 @@ Garage::Garage(int relay_pin) {
 }
 
 void Garage::garage_open() {
-  setLED(ON);
+  setLED(_ON);
   _time_opened = now();
   Serial.printf("Set WDT\n");
 
@@ -22,7 +22,7 @@ void Garage::garage_open() {
 }
 
 void Garage::garage_closed() {
-  setLED(OFF);
+  setLED(_OFF);
   _time_closed = now();
   timer.deleteTimer(_wdt_id);
   _wdt_id = -1;
@@ -53,13 +53,15 @@ void Garage::run() {
     fsm(_event);
   }
 }
-int Garage::led_state(){
+
+uint8_t Garage::led_state(){
   if (_state == OPEN){
     return 1;
   }
   return 0;
 }
-void Garage::fsm(int event) {
+
+void Garage::fsm(uint8_t event) {
   int next_state;
   next_state = _state;
 

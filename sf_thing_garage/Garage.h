@@ -16,8 +16,8 @@
 #define OPEN_WDT 4
 #define ERR_FSM 1
 
-#define OFF 0
-#define ON 1
+//#define OFF 0
+//#define ON 1
 
 // LCD VPins
 #define LCD_0 4
@@ -32,20 +32,23 @@ extern void iosNotify(char *s);
 class Garage
 {
   private:
-    int _state;
-    int _sensor_state;
-    int _led_vpin;
-    int _relay_pin;
+    uint8_t _state;
+    uint8_t _sensor_state;
+    uint8_t _led_vpin;
+    uint8_t _relay_pin;
     time_t _time_opened;
     time_t _time_closed;
-    int _wdt_id;
-    int _event;
+    uint8_t _wdt_id;
+    uint8_t _event;
+
+    const uint8_t _OFF = 0;
+    const uint8_t _ON = 1;
 
   public:
-    Garage(int sensor_pin);
+    Garage(uint8_t sensor_pin);
     void run();
-    void fsm(int event);
-    int led_state();
+    uint8_t led_state();
+    void fsm(uint8_t event);
 
   private:
     void garage_open();
