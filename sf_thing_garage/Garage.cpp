@@ -1,9 +1,8 @@
 #include "Arduino.h"
 #include "Garage.h"
-#include "SimpleTimer.h"
 
 extern SimpleTimer timer;
-extern void gateOpenWDT();
+extern void gate_open_wdt_expired();
 
 Garage::Garage(int relay_pin) {
   _state = CLOSED;
@@ -16,9 +15,10 @@ void Garage::garage_open() {
   setLED(ON);
   _time_opened = now();
   Serial.printf("Set WDT\n");
-  _wdt_id = timer.setTimer(GARAGE_OPEN_TIMEOUT_MIN * 60 * 1000L, gateOpenWDT, 3); //Give three notifications
+
+  _wdt_id = timer.setTimer(GARAGE_OPEN_TIMEOUT_MIN * 60 * 1000L, gate_open_wdt_expired, 3); //Give three notifications
+
   setTime(LCD_0);
-  timer.pprev(2);
 }
 
 void Garage::garage_closed() {
@@ -57,14 +57,12 @@ void Garage::run() {
 void Garage::fsm(int event) {
   int next_state;
   next_state = _state;
-  timer.pprev(1);
 
   switch (_state) {
     case CLOSED:
       if (event == OPEN) {
         garage_open();
         next_state = OPEN;
-        timer.pprev(3);
 
       }
       break;
@@ -78,17 +76,16 @@ void Garage::fsm(int event) {
         Serial.printf("duration: %ld\n", elapsed_time_open);
         sprintf(buf, "Garage door is open %d secs", elapsed_time_open);
         iosNotify(buf);
+        //_wdt_id = timer.setTimeout(1 * 60L * 1000L, gate_open_wdt_expired); // reset and restart the timer
       }
       break;
     default:
       //error(ERR_FSM);
       break;
   }
-  timer.pprev(4);
 
   if (_state != next_state) {
     Serial.printf("State: %d => %d\n", _state, next_state);
   }
   _state = next_state;
-  timer.pprev(5);
 }

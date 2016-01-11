@@ -9,6 +9,7 @@
 #include "Arduino.h"
 #include <TimeLib.h>
 #include <assert.h>
+#include "Simpletimer.h"
 
 #define OPEN 1
 #define CLOSED 2

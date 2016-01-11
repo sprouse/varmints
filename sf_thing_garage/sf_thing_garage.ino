@@ -36,7 +36,7 @@ WidgetLED led1(1);
 SimpleTimer timer;
 float expAverageTemperatureF = 65.0;
 
-#define TIMEZONE -8
+#define TIMEZONE -7
 #define MSECS 1000L
 #define HOURS 3600
 #define MINUTES 60
@@ -46,7 +46,7 @@ NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 1 * MINUTES*MSECS);
 Garage garage(RELAY_PIN);
 
 // Forward declarations
-void repeatMe();
+void repeat_me();
 long int getTime();
 void digitalClockDisplay();
 
@@ -56,7 +56,10 @@ int dummy_sensor;
 #define DUMMY_BUTTON V1
 #define NOTIFY_LED 2
 #define NOTIFY_BUTTON V3
+#define BLYNK_LCD_0 V4
+#define BLYNK_LCD_1 V5
 
+/////////////////////// Blynk Routines ////////////////////////
 
 // Blynk Button simulates garage open or closed.
 BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
@@ -72,28 +75,41 @@ void setLED(int state) {
   digitalWrite(ledPin, state);
 }
 
+char lcd_buf[2][64];
 void setLCD(int vpin, char *buf) {
-  timer.pprev(20);
   Blynk.virtualWrite(vpin, buf);
+  strncpy(lcd_buf[vpin], buf, 64);
 }
 
+BLYNK_READ(BLYNK_LCD_0) // Serve data to Temperature Gauge
+{
+  Blynk.virtualWrite(BLYNK_LCD_0, lcd_buf[0]);
+}
+
+BLYNK_READ(BLYNK_LCD_1) // Serve data to Temperature Gauge
+{
+  Blynk.virtualWrite(BLYNK_LCD_1, lcd_buf[1]);
+}
+
+void iosNotify(char *s) {
+  Blynk.notify(s);
+  Blynk.email("sprouses@gmail.com", "Subject: Garage Open", s);
+}
+
+/////////////////////// Timer Routines ////////////////////////
 void setTime(int vpin) {
   char buf[64];
   snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
   setLCD(vpin, buf);
 }
 
-void gateOpenWDT() {
+void gate_open_wdt_expired() {
   Serial.printf("WDT!\n");
   garage.fsm(OPEN_WDT);
 }
 
-void iosNotify(char *s) {
-  Blynk.notify(s);
-  Blynk.email("sprouses@gmail.com", "Subject: Garage Open", "Garage just opened...");
-}
 
-void repeatMe() {
+void repeat_me() {
   //timeClient.update();
   digitalClockDisplay();
 }
@@ -147,20 +163,15 @@ void setup()
     delay(500);
   }
 
-  //timer.setInterval(1000, repeatMe);
+  //timer.setInterval(1000, repeat_me);
   timeClient.update();
   setSyncProvider(getTime);
 }
 
 void loop()
 {
-  timer.pprev(10);
-
   Blynk.run();
-  timer.pprev(11);
   timer.run();
-  timer.pprev(12);
-
   garage.run();
 }
 
