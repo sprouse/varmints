@@ -30,34 +30,38 @@
 
 WidgetLED led1(1);
 
+// Physical Pins
 #define ledPin 5
 #define RELAY_PIN 13
 
 SimpleTimer timer;
-float expAverageTemperatureF = 65.0;
 
-#define TIMEZONE -7
+// Time Configurtion
+#define TIMEZONE -8
 #define MSECS 1000L
-#define HOURS 3600
-#define MINUTES 60
-//NTPClient timeClient(TIMEZONE * 3600);
-NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 1 * MINUTES*MSECS);
+#define HOURS 3600L
+#define MINUTES 60L
+
+NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 12 * HOURS * MSECS);
+
 
 Garage garage(RELAY_PIN);
 
 // Forward declarations
 void repeat_me();
-long int getTime();
+long int get_time();
 void digitalClockDisplay();
 
 int dummy_sensor;
 
+// Virtual Pins
 #define STATUS_LED 0
 #define DUMMY_BUTTON V1
 #define NOTIFY_LED 2
 #define NOTIFY_BUTTON V3
 #define BLYNK_LCD_0 V4
 #define BLYNK_LCD_1 V5
+#define BLYNK_LED V0
 
 /////////////////////// Blynk Routines ////////////////////////
 
@@ -70,6 +74,10 @@ BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
 }
 
 // Blynk LED Control
+BLYNK_READ(BLYNK_LED){
+  setLED(garage.led_state());
+}
+
 void setLED(int state) {
   Blynk.virtualWrite(STATUS_LED, state);
   digitalWrite(ledPin, state);
@@ -114,7 +122,7 @@ void repeat_me() {
   digitalClockDisplay();
 }
 
-long int getTime() {
+long int get_time() {
   return timeClient.getRawTime();
 }
 
@@ -165,7 +173,7 @@ void setup()
 
   //timer.setInterval(1000, repeat_me);
   timeClient.update();
-  setSyncProvider(getTime);
+  setSyncProvider(get_time);
 }
 
 void loop()

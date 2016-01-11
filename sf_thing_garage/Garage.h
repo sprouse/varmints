@@ -45,6 +45,7 @@ class Garage
     Garage(int sensor_pin);
     void run();
     void fsm(int event);
+    int led_state();
 
   private:
     void garage_open();

@@ -53,7 +53,12 @@ void Garage::run() {
     fsm(_event);
   }
 }
-
+int Garage::led_state(){
+  if (_state == OPEN){
+    return 1;
+  }
+  return 0;
+}
 void Garage::fsm(int event) {
   int next_state;
   next_state = _state;
