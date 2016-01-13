@@ -74,17 +74,17 @@ BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
 }
 
 // Blynk LED Control
-BLYNK_READ(BLYNK_LED){
-  setLED(garage.led_state());
+    BLYNK_READ(BLYNK_LED){
+    setLED(garage.led_state());
 }
 
-void setLED(int state) {
+void setLED(uint8_t state) {
   Blynk.virtualWrite(STATUS_LED, state);
   digitalWrite(ledPin, state);
 }
 
 char lcd_buf[2][64];
-void setLCD(int vpin, char *buf) {
+void setLCD(uint8_t vpin, char *buf) {
   Blynk.virtualWrite(vpin, buf);
   strncpy(lcd_buf[vpin], buf, 64);
 }
@@ -105,7 +105,7 @@ void iosNotify(char *s) {
 }
 
 /////////////////////// Timer Routines ////////////////////////
-void setTime(int vpin) {
+void setTime(uint8_t vpin) {
   char buf[64];
   snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
   setLCD(vpin, buf);

@@ -20,13 +20,13 @@
 //#define ON 1
 
 // LCD VPins
-#define LCD_0 4
-#define LCD_1 5
+//#define LCD_0 4
+//#define LCD_1 5
 
 #define GARAGE_OPEN_TIMEOUT_MIN 10
 
-extern void setLED(int state);
-extern void setTime(int vpin);
+extern void setLED(uint8_t state);
+extern void setTime(uint8_t vpin);
 extern void iosNotify(char *s);
 
 class Garage
@@ -43,6 +43,8 @@ class Garage
 
     const uint8_t _OFF = 0;
     const uint8_t _ON = 1;
+    const uint8_t LCD_0 = 4;
+    const uint8_t LCD_1 = 5;
 
   public:
     Garage(uint8_t sensor_pin);
