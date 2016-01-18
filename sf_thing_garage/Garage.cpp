@@ -5,29 +5,29 @@ extern SimpleTimer timer;
 extern void gate_open_wdt_expired();
 
 Garage::Garage(uint8_t relay_pin) {
-  _state = CLOSED;
+  _state = st_closed;
   //setLED(OFF);
   _relay_pin = relay_pin;
   _wdt_id = -1;
 }
 
 void Garage::garage_open() {
-  setLED(_ON);
+  setLED(ON);
   _time_opened = now();
   Serial.printf("Set WDT\n");
 
   _wdt_id = timer.setTimer(GARAGE_OPEN_TIMEOUT_MIN * 60 * 1000L, gate_open_wdt_expired, 3); //Give three notifications
 
-  setTime(LCD_0);
+  set_event_time(EV_OPENED);
 }
 
 void Garage::garage_closed() {
-  setLED(_OFF);
+  setLED(OFF);
   _time_closed = now();
   timer.deleteTimer(_wdt_id);
   _wdt_id = -1;
-  setTime(LCD_1);
-  //XXX make string with time closed and send to blynk display
+  set_event_time(EV_CLOSED);
+  Serial.printf("Deleted WDT\n");
 }
 
 void Garage::begin() {
@@ -42,10 +42,10 @@ void Garage::run() {
   //int new_sensor = dummy_sensor;
   if (new_sensor != _sensor_state) {
     if (new_sensor) {
-      _event = OPEN;
+      _event = EV_OPENED;
       Serial.println("Sensor opened");
     } else {
-      _event = CLOSED;
+      _event = EV_CLOSED;
       Serial.println("Sensor closed");
     }
     _sensor_state = new_sensor;
@@ -55,29 +55,26 @@ void Garage::run() {
 }
 
 uint8_t Garage::led_state(){
-  if (_state == OPEN){
-    return 1;
-  }
-  return 0;
+  return _sensor_state;
 }
 
 void Garage::fsm(uint8_t event) {
-  int next_state;
+  _state_t next_state;
   next_state = _state;
 
   switch (_state) {
-    case CLOSED:
-      if (event == OPEN) {
+    case st_closed:
+      if (event == EV_OPENED) {
         garage_open();
-        next_state = OPEN;
+        next_state = st_open;
 
       }
       break;
-    case OPEN:
-      if (event == CLOSED) {
+    case st_open:
+      if (event == EV_CLOSED) {
         garage_closed();
-        next_state = CLOSED;
-      } else if (event == OPEN_WDT) {
+        next_state = st_closed;
+      } else if (event == EV_OPEN_WDT) {
         char buf[256];
         long elapsed_time_open = now() - _time_opened;
         Serial.printf("duration: %ld\n", elapsed_time_open);

@@ -24,11 +24,10 @@
 
 #include "Garage.h"
 
-
 // Private wifi settings and Blynk auth token are in this file
 #include "wifi_settings.h"
 
-WidgetLED led1(1);
+WidgetLED led0(0);
 
 // Physical Pins
 #define ledPin 5
@@ -48,7 +47,6 @@ NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 12 * HOURS * MSECS);
 Garage garage(RELAY_PIN);
 
 // Forward declarations
-void repeat_me();
 long int get_time();
 void digitalClockDisplay();
 
@@ -56,15 +54,16 @@ int dummy_sensor;
 
 // Virtual Pins
 #define STATUS_LED 0
+
+#define BLYNK_LED V0
 #define DUMMY_BUTTON V1
-#define NOTIFY_LED 2
-#define NOTIFY_BUTTON V3
 #define BLYNK_LCD_0 V4
 #define BLYNK_LCD_1 V5
-#define BLYNK_LED V0
+
+#define BLYNK_LCD_ROW0 4
+#define BLYNK_LCD_ROW1 5
 
 /////////////////////// Blynk Routines ////////////////////////
-
 // Blynk Button simulates garage open or closed.
 BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
 {
@@ -73,29 +72,52 @@ BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
   Serial.printf("button V1 = %u\n", dummy_sensor);
 }
 
-// Blynk LED Control
-    BLYNK_READ(BLYNK_LED){
-    setLED(garage.led_state());
-}
-
 void setLED(uint8_t state) {
-  Blynk.virtualWrite(STATUS_LED, state);
+  Serial.printf("set led=%d\n", state);
+  if (state == 1){
+    led0.on();
+  } else {
+    led0.off();
+  }
   digitalWrite(ledPin, state);
 }
 
 char lcd_buf[2][64];
-void setLCD(uint8_t vpin, char *buf) {
+
+void refreshLCD(uint8_t op) {
+	uint8_t vpin = BLYNK_LCD_ROW0;
+  char *buf = lcd_buf[0];
+	if (op == EV_CLOSED) {
+		vpin = BLYNK_LCD_ROW1;
+    buf = lcd_buf[1];
+	} 
+  //Serial.printf("refresh lcd: %d\n", vpin);
   Blynk.virtualWrite(vpin, buf);
-  strncpy(lcd_buf[vpin], buf, 64);
+  setLED(garage.led_state());
+}
+
+void setLCD(uint8_t op, char const *buf) {
+  Serial.printf("setLCD %d: %s\n", op, buf);
+  char *bufp = lcd_buf[0];
+  if (op == EV_CLOSED) {
+    bufp = lcd_buf[1];
+  }
+
+  strncpy(bufp, buf, 64);
+	refreshLCD(op);
 }
 
 BLYNK_READ(BLYNK_LCD_0) // Serve data to Temperature Gauge
 {
+	Serial.printf("lcd0 read\n");
   Blynk.virtualWrite(BLYNK_LCD_0, lcd_buf[0]);
+  setLED(garage.led_state());
 }
 
 BLYNK_READ(BLYNK_LCD_1) // Serve data to Temperature Gauge
 {
+	Serial.printf("lcd1 read\n");
+  setLED(garage.led_state());
   Blynk.virtualWrite(BLYNK_LCD_1, lcd_buf[1]);
 }
 
@@ -105,21 +127,15 @@ void iosNotify(char *s) {
 }
 
 /////////////////////// Timer Routines ////////////////////////
-void setTime(uint8_t vpin) {
+void set_event_time(uint8_t op) {
   char buf[64];
   snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
-  setLCD(vpin, buf);
+  setLCD(op, buf);
 }
 
 void gate_open_wdt_expired() {
   Serial.printf("WDT!\n");
-  garage.fsm(OPEN_WDT);
-}
-
-
-void repeat_me() {
-  //timeClient.update();
-  digitalClockDisplay();
+  garage.fsm(EV_OPEN_WDT);
 }
 
 long int get_time() {
@@ -171,9 +187,12 @@ void setup()
     delay(500);
   }
 
-  //timer.setInterval(1000, repeat_me);
   timeClient.update();
   setSyncProvider(get_time);
+
+	// Initialize the LCD
+	set_event_time(0);
+	setLCD(EV_CLOSED, "NA");
 }
 
 void loop()
