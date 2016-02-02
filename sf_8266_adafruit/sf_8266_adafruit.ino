@@ -3,14 +3,7 @@
 #include "Adafruit_MQTT_Client.h"
 
 // WiFi parameters
-#define WLAN_SSID       "CorpGuest"
-#define WLAN_PASS       ""
-
-// Adafruit IO
-#define AIO_SERVER      "io.adafruit.com"
-#define AIO_SERVERPORT  1883
-#define AIO_USERNAME    "Gorp"
-#define AIO_KEY         "6afb3b610d14e11d077873ddb86e56f4dd2ff6f0"
+#include "wifi_setup.h"
 
 // Functions
 void connect();
@@ -75,7 +68,7 @@ void loop() {
   if (! temperature.publish(i))
     Serial.println(F("Failed to publish temperature"));
   else
-    Serial.println(F("Temperature published!"));
+    Serial.printf("Temperature published! %d\n",i);
 
   delay(5000);
   i++;
