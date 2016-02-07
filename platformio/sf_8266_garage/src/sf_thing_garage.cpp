@@ -16,11 +16,15 @@
 **************************************************************/
 
 #define BLYNK_PRINT Serial // Comment this out to disable prints and save space
-#include <ESP8266WiFi.h>
+#include <ArduinoOTA.h>
 #include <BlynkSimpleEsp8266.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
 #include <NTPClient.h>
-#include "SimpleTimer.h"
+#include "OTA_setup.h"
+#include <SimpleTimer.h>
 #include <Time.h>
+#include <WifiUdp.h>
 
 #include "Garage.h"
 
@@ -29,9 +33,16 @@
 
 WidgetLED led0(0);
 
+#define NODE_MCU
+#ifndef NODE_MCU
 // Physical Pins
 #define ledPin 5
 #define RELAY_PIN 13
+
+#else
+#define ledPin 16
+#define RELAY_PIN 14
+#endif
 
 SimpleTimer timer;
 
@@ -165,6 +176,7 @@ void digitalClockDisplay() {
   Serial.println();
 }
 
+
 time_t time_open;
 time_t time_closed;
 
@@ -187,6 +199,8 @@ void setup()
     delay(500);
   }
 
+  OTA_setup();
+
   timeClient.update();
   setSyncProvider(get_time);
 
@@ -200,5 +214,6 @@ void loop()
   Blynk.run();
   timer.run();
   garage.run();
+  ArduinoOTA.handle();
 }
 
