@@ -7,16 +7,17 @@
 #include "wifi_settings.h"
 
 SimpleTimer timer;
-SimpleTimer timer2;
-SimpleTimer timer3;
 
+#define NODE_MCU
+#ifndef NODE_MCU
+#define LED_PIN 5
+#else
 #define LED_PIN 16
+#endif
+
 bool led_state = 0;
 void timer_handler() {
-  if (led_state != 1) 
-     led_state = 1;
-  else 
-    led_state = 0;
+  led_state = !led_state;
 
   Serial.printf("Led = %d\n", led_state);
   digitalWrite(LED_PIN, led_state);
@@ -24,9 +25,7 @@ void timer_handler() {
 
 void led_setup(){
   pinMode(LED_PIN, OUTPUT);
-  timer.setInterval(3000, timer_handler);
-  timer2.setInterval(5000, timer_handler);
-  timer3.setInterval(7000, timer_handler);
+  timer.setInterval(1000, timer_handler);
 }
 
 void WiFi_setup() {
@@ -84,6 +83,4 @@ void setup() {
 void loop() {
   ArduinoOTA.handle();
   timer.run();
-  timer2.run();
-  timer3.run();
 }
