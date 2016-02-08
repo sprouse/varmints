@@ -14,18 +14,25 @@
   by Scott Fitzgerald
  */
 
+#ifndef NODE_MCU
+#define LED 5
+#else
 #define LED 16
+#endif
 
 // the setup function runs once when you press reset or power the board
 void setup() {
+  Serial.begin(115200);
   // initialize digital LED pin as an output.
   pinMode(LED, OUTPUT);
 }
 
 // the loop function runs over and over again forever
 void loop() {
+  Serial.println("HIGH");
   digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(5000);              // wait for a second
+  delay(200);              // wait for a second
+  Serial.println("LOW");
   digitalWrite(LED, LOW);    // turn the LED off by making the voltage LOW
-  delay(5000);              // wait for a second
+  delay(200);              // wait for a second
 }
