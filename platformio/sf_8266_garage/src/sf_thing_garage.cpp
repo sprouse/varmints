@@ -33,15 +33,17 @@
 
 WidgetLED led0(0);
 
-#define NODE_MCU
-#ifndef NODE_MCU
 // Physical Pins
+#ifndef NODE_MCU
+
 #define ledPin 5
 #define RELAY_PIN 13
 
 #else
+
 #define ledPin 16
 #define RELAY_PIN 14
+
 #endif
 
 SimpleTimer timer;
