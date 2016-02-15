@@ -8,7 +8,8 @@
 
 SimpleTimer timer;
 
-#define NODE_MCU
+#define PERIOD_MS  2000
+
 #ifndef NODE_MCU
 #define LED_PIN 5
 #else
@@ -25,15 +26,25 @@ void timer_handler() {
 
 void led_setup(){
   pinMode(LED_PIN, OUTPUT);
-  timer.setInterval(1000, timer_handler);
+  timer.setInterval(PERIOD_MS, timer_handler);
 }
 
 void WiFi_setup() {
   Serial.println("Booting");
+
+  byte mac[6];
+  WiFi.macAddress(mac);
+  Serial.print("MAC: ");
+  for (uint8_t i=0; i<6; i++){
+    Serial.print(mac[i],HEX);
+    Serial.print(":");
+  }
+  Serial.println();
+
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("Connection Failed! Rebooting...");
+    Serial.println(F("Connection Failed! Rebooting..."));
     delay(5000);
     ESP.restart();
   }
