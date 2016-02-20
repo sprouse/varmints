@@ -83,6 +83,7 @@ BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
   Serial.printf("Button V1 = %u\n", button_state);
   terminal.printf("Button V1 = %u\n", button_state);
   terminal.flush();
+  pump.fsm(Pump::ev_none);
 }
 
 void set_pump_led(uint8_t state) {
@@ -93,11 +94,10 @@ void set_pump_led(uint8_t state) {
   } else {
     led0.off();
   }
-#ifndef NODE_MCU
-  digitalWrite(ledPin, state);
-#else
-  digitalWrite(ledPin, !state);
+#ifdef NODE_MCU
+  state != state;
 #endif
+  digitalWrite(ledPin, !state);
 }
 
 void iosNotify(char *s) {
@@ -111,7 +111,6 @@ void pump_timer_event() {
   pump.fsm(Pump::ev_timer_tick);
   tick_count++;
 }
-
 
 void set_event_time(uint8_t op) {
   char buf[64];
@@ -156,8 +155,6 @@ void set_run_button(uint8_t state) {
   button_state = state;
 }
 
-
-
 void setup()
 {
   Serial.begin(115200);
@@ -177,10 +174,8 @@ void setup()
     delay(500);
   }
 
-
   terminal.printf("\nBlynk Ready\n");
   terminal.flush();
-
 
   OTA_setup();
 
@@ -191,7 +186,7 @@ void setup()
 	set_event_time(0);
 
   // Set a 1 sec timer to call the pump fsm.
-  Serial.printf("Set 1 sec pump timer\n");
+  Serial.printf("Set 5 sec pump interval\n");
   timer.setInterval(PUMP_TICK_INTERVAL_S, pump_timer_event); //Give three notifications
 
   pump.begin();

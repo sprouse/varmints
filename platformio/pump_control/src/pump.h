@@ -22,8 +22,7 @@ class Pump
   public:
 		enum _event_t {
 			ev_none,
-			ev_timer_tick,
-			ev_start_pump
+			ev_timer_tick
 		};
 
   private:

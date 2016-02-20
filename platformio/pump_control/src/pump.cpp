@@ -34,7 +34,7 @@ void Pump::fsm(uint8_t event) {
     // Pump is off and is prevented from turning on for some interval.
     case st_off_and_locked_out:
       if (event == ev_timer_tick) {
-          sprintf(buf, "lockout %d of %d", _tick_count, _pump_lockout_time);
+          sprintf(buf, "lockout: %d of %d", _tick_count, _pump_lockout_time);
           bprint(buf);
           _tick_count++;
       }
@@ -47,7 +47,7 @@ void Pump::fsm(uint8_t event) {
 
     // Pump is off and is able to be turned on.
     case st_off:
-      sprintf(buf, "pump off");
+      sprintf(buf, "off:");
       bprint(buf);
       if (button_state == 1) {
         set_pump(_pump_on);
