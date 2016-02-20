@@ -2,91 +2,72 @@
 #include "Pump.h"
 #include <Time.h>
 
-extern SimpleTimer timer;
-extern void gate_open_wdt_expired();
+extern void bprint(char *buf);
+extern void set_pump_led(uint8_t state);
+extern void set_run_button(uint8_t state);
+
+char buf[256];
 
 Pump::Pump(uint8_t relay_pin) {
-  _state = st_off;
+  _state = st_off_and_locked_out;
   _relay_pin = relay_pin;
-  _wdt_id = -1;
 }
 
-void Pump::set_pump(int state){
-  digitalWrite(relay_pin, state);
-}
-
-void Pump::start_timer() {
-  Serial.printf("Set WDT\n");
-  _wdt_id = timer.setTimerInterval(1000L, pump_timer_event); //Give three notifications
-}
-
-void Pump::stop_timer() {
-  timer.deleteTimer(_wdt_id);
-  _wdt_id = -1;
-  Serial.printf("Deleted WDT\n");
+void Pump::set_pump(uint8_t state){
+  digitalWrite(_relay_pin, state);
+  set_pump_led(state);
 }
 
 void Pump::begin() {
-  _time_opened = now();
-  _time_closed = now();
-  pinMode(_relay_pin, INPUT);
+  set_pump(_pump_off);
 }
 
-extern int dummy_sensor;
+extern int button_state;
 void Pump::run() {
-  int new_sensor = dummy_sensor;
-  if (new_sensor != _sensor_state) {
-    if (new_sensor) {
-      _event = EV_START_PUMP;
-      Serial.println("Sensor opened");
-    } else {
-      _event = EV_STOP_PUMP;
-      Serial.println("Sensor closed");
-    }
-    _sensor_state = new_sensor;
-
-    fsm(_event);
-  }
 }
 
-uint8_t Pump::led_state(){
-  return _sensor_state;
-}
-
-#define PUMP_ON 1
-#define PUMP_OFF 0
 void Pump::fsm(uint8_t event) {
   _state_t next_state;
   next_state = _state;
 
   switch (_state) {
-    case st_off:
-      if (event == EV_START_PUMP) {
-        set_pump(PUMP_ON);
-        start_timer();
-        next_state = st_run_interval;
-        tick_count = 0;
+    // Pump is off and is prevented from turning on for some interval.
+    case st_off_and_locked_out:
+      if (event == ev_timer_tick) {
+          sprintf(buf, "lockout %d of %d", _tick_count, _pump_lockout_time);
+          bprint(buf);
+          _tick_count++;
       }
-      break;
-    case st_run_interval:
-      if (event == PUMP_TICK) {
-          tick_count++;
-      }
-      if (tick_count > PUMP_ON_TIME) {
-        next_state = st_wait_interval;
-        set_pump(PUMP_OFF);
-        tick_count = 0;
+      if (_tick_count > _pump_lockout_time) {
+        next_state = st_off;
+        set_pump(_pump_off);
+        _tick_count = 0;
       } 
       break;
-    case st_wait_interval:
-      if (event == PUMP_TICK) {
-          tick_count++;
+
+    // Pump is off and is able to be turned on.
+    case st_off:
+      sprintf(buf, "pump off");
+      bprint(buf);
+      if (button_state == 1) {
+        set_pump(_pump_on);
+        next_state = st_run_interval;
+        _tick_count = 0;
       }
-      if (tick_count > PUMP_WAIT_TIME) {
-        next_state = st_off;
-        tick_count = 0;
-        stop_timer();
+      break;
+    // Pump runs for some interval
+    // TODO: Add temperature detection as another way to exit this state.
+    case st_run_interval:
+      if (event == ev_timer_tick) {
+          sprintf(buf, "run: %d of %d", _tick_count, _pump_on_time);
+          bprint(buf);
+          _tick_count++;
       }
+      if (_tick_count > _pump_on_time) {
+        next_state = st_off_and_locked_out;
+        set_pump(_pump_off);
+        _tick_count = 0;
+      } 
       break;
     default:
       //error(ERR_FSM);
@@ -97,4 +78,6 @@ void Pump::fsm(uint8_t event) {
     Serial.printf("State: %d => %d\n", _state, next_state);
   }
   _state = next_state;
+  // Clear the button state
+  set_run_button(0);
 }

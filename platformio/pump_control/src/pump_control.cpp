@@ -32,6 +32,7 @@
 #include "wifi_settings.h"
 
 WidgetLED led0(0);
+WidgetTerminal terminal(10);
 
 // Physical Pins
 #ifndef NODE_MCU
@@ -54,6 +55,8 @@ SimpleTimer timer;
 #define HOURS 3600L
 #define MINUTES 60L
 
+#define PUMP_TICK_INTERVAL_S 5 * MSECS
+
 NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 12 * HOURS * MSECS);
 
 
@@ -63,36 +66,38 @@ Pump pump(RELAY_PIN);
 long int get_time();
 void digitalClockDisplay();
 
-int dummy_sensor;
+int button_state;
 
 // Virtual Pins
-#define STATUS_LED 0
-
 #define BLYNK_LED V0
 #define DUMMY_BUTTON V1
-#define BLYNK_LCD_0 V4
-#define BLYNK_LCD_1 V5
-
-#define BLYNK_LCD_ROW0 4
-#define BLYNK_LCD_ROW1 5
+#define BLYNK_LCD_0 V2
+#define BLYNK_LCD_1 V3
 
 /////////////////////// Blynk Routines ////////////////////////
 // Blynk Button simulates garage open or closed.
 BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
 {
-  dummy_sensor = param.asInt();
+  button_state = param.asInt();
   Serial.println("=======");
-  Serial.printf("Button V1 = %u\n", dummy_sensor);
+  Serial.printf("Button V1 = %u\n", button_state);
+  terminal.printf("Button V1 = %u\n", button_state);
+  terminal.flush();
 }
 
-void setLED(uint8_t state) {
+void set_pump_led(uint8_t state) {
   Serial.printf("set led=%d\n", state);
+
   if (state == 1){
     led0.on();
   } else {
     led0.off();
   }
+#ifndef NODE_MCU
   digitalWrite(ledPin, state);
+#else
+  digitalWrite(ledPin, !state);
+#endif
 }
 
 void iosNotify(char *s) {
@@ -101,19 +106,16 @@ void iosNotify(char *s) {
 }
 
 /////////////////////// Timer Routines ////////////////////////
+uint32_t tick_count = 0;
 void pump_timer_event() {
   pump.fsm(Pump::ev_timer_tick);
+  tick_count++;
 }
 
 
 void set_event_time(uint8_t op) {
   char buf[64];
   snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
-}
-
-void gate_open_wdt_expired() {
-  Serial.printf("WDT!\n");
-  pump.fsm(EV_OPEN_WDT);
 }
 
 long int get_time() {
@@ -143,9 +145,18 @@ void digitalClockDisplay() {
   Serial.println();
 }
 
+////////////////// Pump support routines
+void bprint(char *buf) {
+  terminal.println(buf);
+  terminal.flush();
+}
 
-time_t time_open;
-time_t time_closed;
+void set_run_button(uint8_t state) {
+  Blynk.virtualWrite(V1, state);
+  button_state = state;
+}
+
+
 
 void setup()
 {
@@ -155,7 +166,7 @@ void setup()
 
   // Initialize the LED pin
   pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, 0);
+  set_pump_led(0);
 
   // Initialize the relay input pin
   pinMode(RELAY_PIN, INPUT_PULLUP);
@@ -165,6 +176,11 @@ void setup()
     Serial.print(".");
     delay(500);
   }
+
+
+  terminal.printf("\nBlynk Ready\n");
+  terminal.flush();
+
 
   OTA_setup();
 
@@ -176,14 +192,16 @@ void setup()
 
   // Set a 1 sec timer to call the pump fsm.
   Serial.printf("Set 1 sec pump timer\n");
-  timer.setInterval(1000L, pump_timer_event); //Give three notifications
+  timer.setInterval(PUMP_TICK_INTERVAL_S, pump_timer_event); //Give three notifications
+
+  pump.begin();
 }
 
 void loop()
 {
   Blynk.run();
   timer.run();
-  pump.run();
   ArduinoOTA.handle();
+  pump.run();
 }
 
