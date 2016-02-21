@@ -41,6 +41,9 @@ class Pump
     uint8_t _event;
     uint32_t _tick_count;
 
+#define BUF_LEN 128
+    char buf[BUF_LEN];
+
   public:
     Pump(uint8_t sensor_pin);
     void run();

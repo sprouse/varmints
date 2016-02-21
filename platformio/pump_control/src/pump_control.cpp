@@ -25,11 +25,13 @@
 #include <SimpleTimer.h>
 #include <Time.h>
 #include <WifiUdp.h>
-
 #include "Pump.h"
 
 // Private wifi settings and Blynk auth token are in this file
 #include "wifi_settings.h"
+
+// Forward declarations
+void bprint(char *buf);
 
 WidgetLED led0(0);
 WidgetTerminal terminal(10);
@@ -55,7 +57,8 @@ SimpleTimer timer;
 #define HOURS 3600L
 #define MINUTES 60L
 
-#define PUMP_TICK_INTERVAL_S 5 * MSECS
+#define PUMP_FSM_INTERVAL_S 5 * MSECS
+#define PUMP_SCHED_INTERVAL_S 30 * MSECS
 
 NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 12 * HOURS * MSECS);
 
@@ -106,15 +109,18 @@ void iosNotify(char *s) {
 }
 
 /////////////////////// Timer Routines ////////////////////////
-uint32_t tick_count = 0;
-void pump_timer_event() {
+void pump_fsm_timer() {
   pump.fsm(Pump::ev_timer_tick);
-  tick_count++;
 }
 
-void set_event_time(uint8_t op) {
+void pump_timer_event() {
+  pump.fsm(Pump::ev_timer_tick);
+}
+
+void show_time() {
   char buf[64];
   snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
+  bprint(buf);
 }
 
 long int get_time() {
@@ -181,13 +187,13 @@ void setup()
 
   timeClient.update();
   setSyncProvider(get_time);
-
-	// Initialize the LCD
-	set_event_time(0);
+  show_time();
 
   // Set a 1 sec timer to call the pump fsm.
-  Serial.printf("Set 5 sec pump interval\n");
-  timer.setInterval(PUMP_TICK_INTERVAL_S, pump_timer_event); //Give three notifications
+  Serial.printf("Set 5 sec fsm interval\n");
+  timer.setInterval(PUMP_FSM_INTERVAL_S, pump_fsm_timer); //Give three notifications
+  //Serial.printf("Set 1 minute pump interval\n");
+  //timer.setInterval(PUMP_SCHED_INTERVAL_S, pump_sched_timer); //Give three notifications
 
   pump.begin();
 }
