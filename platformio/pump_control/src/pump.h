@@ -26,11 +26,22 @@ class Pump
 		};
 
   private:
+#define PUMP_STATES \
+    X(st_off_and_locked_out, "locked") \
+    X(st_off, "off") \
+    X(st_run_interval, "run")
+
+#define X(a, b) a,
+enum _state_t { PUMP_STATES } _state;
+#undef X
+
+#ifdef FALSE
 		enum _state_t {
 			st_off_and_locked_out,
 			st_off,
 			st_run_interval,
 		} _state;
+#endif
 
     const uint8_t _pump_off = 0;
     const uint8_t _pump_on = 1;

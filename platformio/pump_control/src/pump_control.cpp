@@ -57,7 +57,7 @@ SimpleTimer timer;
 #define HOURS 3600L
 #define MINUTES 60L
 
-#define PUMP_FSM_INTERVAL_S 5 * MSECS
+#define PUMP_FSM_INTERVAL_S 1 * MSECS
 #define PUMP_SCHED_INTERVAL_S 30 * MSECS
 
 NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 12 * HOURS * MSECS);
@@ -84,8 +84,10 @@ BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
   button_state = param.asInt();
   Serial.println("=======");
   Serial.printf("Button V1 = %u\n", button_state);
+#ifdef DEBUG_TERM
   terminal.printf("Button V1 = %u\n", button_state);
   terminal.flush();
+#endif
   pump.fsm(Pump::ev_none);
 }
 
@@ -113,10 +115,26 @@ void pump_fsm_timer() {
   pump.fsm(Pump::ev_timer_tick);
 }
 
-void pump_timer_event() {
-  pump.fsm(Pump::ev_timer_tick);
+void pump_sched_timer() {
+  switch(minute()) {
+    case 5:
+    case 6:
+    case 7:
+    case 8:
+    case 9:
+    case 17:
+    case 18:
+    case 19:
+    case 20:
+    case 21:
+    case 22:
+    case 23:
+      break;
+    default:
+      break;
+  }
 }
-
+    
 void show_time() {
   char buf[64];
   snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
@@ -192,8 +210,8 @@ void setup()
   // Set a 1 sec timer to call the pump fsm.
   Serial.printf("Set 5 sec fsm interval\n");
   timer.setInterval(PUMP_FSM_INTERVAL_S, pump_fsm_timer); //Give three notifications
-  //Serial.printf("Set 1 minute pump interval\n");
-  //timer.setInterval(PUMP_SCHED_INTERVAL_S, pump_sched_timer); //Give three notifications
+  Serial.printf("Set 1 minute pump interval\n");
+  timer.setInterval(PUMP_SCHED_INTERVAL_S, pump_sched_timer); //Give three notifications
 
   pump.begin();
 }
