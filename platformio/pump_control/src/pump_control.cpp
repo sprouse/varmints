@@ -32,6 +32,7 @@
 
 // Forward declarations
 void bprint(char *buf);
+void show_time();
 
 WidgetLED led0(0);
 WidgetTerminal terminal(10);
@@ -58,7 +59,7 @@ SimpleTimer timer;
 #define MINUTES 60L
 
 #define PUMP_FSM_INTERVAL_S 1 * MSECS
-#define PUMP_SCHED_INTERVAL_S 30 * MSECS
+#define PUMP_SCHED_INTERVAL_S 1 * MSECS
 
 NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 12 * HOURS * MSECS);
 
@@ -116,19 +117,20 @@ void pump_fsm_timer() {
 }
 
 void pump_sched_timer() {
-  switch(minute()) {
-    case 5:
-    case 6:
-    case 7:
-    case 8:
-    case 9:
-    case 17:
-    case 18:
-    case 19:
-    case 20:
-    case 21:
-    case 22:
-    case 23:
+  char buf[64];
+#ifdef DEBUG_TERM
+  snprintf(buf, 64, "Sched timer %02d:%02d", minute(), second());
+  bprint(buf);
+#endif
+  switch(minute()%2) {
+    case 1:
+      if (second() % 30 == 0){
+        button_state = 1;
+        show_time();
+        snprintf(buf, 64, "Sched trigger");
+        bprint(buf);
+        pump.fsm(Pump::ev_none);
+      }
       break;
     default:
       break;
@@ -209,9 +211,10 @@ void setup()
 
   // Set a 1 sec timer to call the pump fsm.
   Serial.printf("Set 5 sec fsm interval\n");
-  timer.setInterval(PUMP_FSM_INTERVAL_S, pump_fsm_timer); //Give three notifications
+  timer.setInterval(PUMP_FSM_INTERVAL_S, pump_fsm_timer); 
+
   Serial.printf("Set 1 minute pump interval\n");
-  timer.setInterval(PUMP_SCHED_INTERVAL_S, pump_sched_timer); //Give three notifications
+  timer.setInterval(PUMP_SCHED_INTERVAL_S, pump_sched_timer); 
 
   pump.begin();
 }
