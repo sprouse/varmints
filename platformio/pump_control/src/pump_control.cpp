@@ -41,12 +41,12 @@ WidgetTerminal terminal(10);
 // Physical Pins
 #ifndef NODE_MCU
 
-#define ledPin 5
+#define LED_PIN 5
 #define RELAY_PIN 13
 
 #else
 
-#define ledPin 16
+#define LED_PIN 16
 #define RELAY_PIN 14
 
 #endif
@@ -64,8 +64,7 @@ SimpleTimer timer;
 
 NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 12 * HOURS * MSECS);
 
-
-Pump pump(RELAY_PIN);
+Pump pump;
 
 // Forward declarations
 long int get_time();
@@ -93,7 +92,7 @@ BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
   pump.fsm(Pump::ev_none);
 }
 
-void set_pump_led(uint8_t state) {
+void set_pump_state(uint8_t state) {
   Serial.printf("set led=%d\n", state);
 
   if (state == 1){
@@ -104,7 +103,8 @@ void set_pump_led(uint8_t state) {
 #ifdef NODE_MCU
   state != state;
 #endif
-  digitalWrite(ledPin, !state);
+  digitalWrite(LED_PIN, !state);
+  digitalWrite(RELAY_PIN, !state);
 }
 
 void iosNotify(char *s) {
@@ -200,17 +200,15 @@ void setup()
   Serial.print("\nStarting\n");
   Blynk.begin(auth, WIFI_SSID, WIFI_KEY);
 
-  // Initialize the LED pin
-  pinMode(ledPin, OUTPUT);
-  set_pump_led(0);
-
-  // Initialize the relay input pin
-  pinMode(RELAY_PIN, INPUT_PULLUP);
+  // Initialize the LED and Relay pins
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(RELAY_PIN, OUTPUT);
+  set_pump_state(0);
 
   // Wait until connected to Blynk
   while (Blynk.connect() == false) {
     Serial.print(".");
-    delay(500);
+    delay(1000);
   }
 
   terminal.printf("\nBlynk Ready\n");

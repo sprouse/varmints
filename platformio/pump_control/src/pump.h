@@ -56,9 +56,8 @@ enum _state_t { PUMP_STATES } _state;
     char buf[BUF_LEN];
 
   public:
-    Pump(uint8_t sensor_pin);
+    Pump();
     void run();
-    uint8_t led_state();
     void fsm(uint8_t event);
     void begin();
 

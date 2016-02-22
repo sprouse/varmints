@@ -3,7 +3,7 @@
 #include <Time.h>
 
 extern void bprint(char *buf);
-extern void set_pump_led(uint8_t state);
+extern void set_pump_state(uint8_t state);
 extern void set_run_button(uint8_t state);
 extern void show_time();
 
@@ -11,19 +11,12 @@ extern void show_time();
 static char *state_strings[] = { PUMP_STATES };
 #undef X
 
-Pump::Pump(uint8_t relay_pin) {
+Pump::Pump() {
   _state = st_off_and_locked_out;
-  _relay_pin = relay_pin;
-
-}
-
-void Pump::set_pump(uint8_t state){
-  digitalWrite(_relay_pin, state);
-  set_pump_led(state);
 }
 
 void Pump::begin() {
-  set_pump(_pump_off);
+  set_pump_state(_pump_off);
 }
 
 extern int button_state;
@@ -31,10 +24,8 @@ void Pump::run() {
 }
 
 void Pump::fsm(uint8_t event) {
-  _state_t next_state;
+  _state_t next_state = _state;
 
-
-  next_state = _state;
   switch (_state) {
     // Pump is off and is prevented from turning on for some interval.
     case st_off_and_locked_out:
@@ -47,7 +38,7 @@ void Pump::fsm(uint8_t event) {
       }
       if (_tick_count >= _pump_lockout_time) {
         next_state = st_off;
-        set_pump(_pump_off);
+        set_pump_state(_pump_off);
         _tick_count = 0;
       } 
       break;
@@ -55,7 +46,7 @@ void Pump::fsm(uint8_t event) {
     // Pump is off and is able to be turned on.
     case st_off:
       if (button_state == 1) {
-        set_pump(_pump_on);
+        set_pump_state(_pump_on);
         next_state = st_run_interval;
         _tick_count = 0;
       }
@@ -72,7 +63,7 @@ void Pump::fsm(uint8_t event) {
       }
       if (_tick_count >= _pump_on_time) {
         next_state = st_off_and_locked_out;
-        set_pump(_pump_off);
+        set_pump_state(_pump_off);
         _tick_count = 0;
       } 
       break;
