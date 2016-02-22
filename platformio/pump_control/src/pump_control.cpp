@@ -33,6 +33,7 @@
 // Forward declarations
 void bprint(char *buf);
 void show_time();
+void show_time(time_t t);
 
 WidgetLED led0(0);
 WidgetTerminal terminal(10);
@@ -118,15 +119,22 @@ void pump_fsm_timer() {
 
 void pump_sched_timer() {
   char buf[64];
+
+  // Sample these immediately.
+
+  time_t t = now();
+
+#undef DEBUG_TERM
 #ifdef DEBUG_TERM
-  snprintf(buf, 64, "Sched timer %02d:%02d", minute(), second());
+  snprintf(buf, 64, "Sched timer %02d:%02d", minute(t), second(t));
   bprint(buf);
 #endif
-  switch(minute()%2) {
+  switch(minute(t) % 2) {
+    case 0:
     case 1:
-      if (second() % 30 == 0){
+      if (second(t) % 15 == 0){
         button_state = 1;
-        show_time();
+        show_time(t);
         snprintf(buf, 64, "Sched trigger");
         bprint(buf);
         pump.fsm(Pump::ev_none);
@@ -138,8 +146,13 @@ void pump_sched_timer() {
 }
     
 void show_time() {
+  time_t t = now();
+  show_time(t);
+}
+
+void show_time(time_t t) {
   char buf[64];
-  snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
+  snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(t), day(t), hour(t), minute(t), second(t));
   bprint(buf);
 }
 
