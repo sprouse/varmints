@@ -35,7 +35,8 @@ void bprint(char *buf);
 void show_time();
 void show_time(time_t t);
 
-WidgetLED led0(0);
+WidgetLED run_led(V0);
+WidgetLED vac_led(V2);
 WidgetTerminal terminal(10);
 
 // Physical Pins
@@ -70,35 +71,52 @@ Pump pump;
 long int get_time();
 void digitalClockDisplay();
 
-int button_state;
+int run_button_state;
+int vacation_button_state;
 
 // Virtual Pins
-#define BLYNK_LED V0
-#define DUMMY_BUTTON V1
-#define BLYNK_LCD_0 V2
-#define BLYNK_LCD_1 V3
+#define BLYNK_LED   V0
+#define RUN_BUTTON  V1
+#define VAC_LED     V2
+#define VAC_BUTTON  V3
+#define TERMINAL    V10
 
 /////////////////////// Blynk Routines ////////////////////////
-// Blynk Button simulates garage open or closed.
-BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
+// Blynk button to run the pump
+BLYNK_WRITE(RUN_BUTTON) 
 {
-  button_state = param.asInt();
+  run_button_state = param.asInt();
   Serial.println("=======");
-  Serial.printf("Button V1 = %u\n", button_state);
+  Serial.printf("Button V1 = %u\n", run_button_state);
 #ifdef DEBUG_TERM
-  terminal.printf("Button V1 = %u\n", button_state);
+  terminal.printf("Button V1 = %u\n", run_button_state);
   terminal.flush();
 #endif
   pump.fsm(Pump::ev_none);
+}
+
+// TODO: The Vacation button state does not persist across power cycles on the board
+// or across app starts on the phone. :(
+BLYNK_WRITE(VAC_BUTTON) 
+{
+  vacation_button_state = param.asInt();
+  Serial.println("=======");
+  Serial.printf("Button V3 = %u\n", vacation_button_state);
+#ifdef DEBUG_TERM
+  terminal.printf("Button V3 = %u\n", vacation_button_state);
+  terminal.flush();
+#endif
+  // Remember that LED's have a "brightness" in the range 0 to 1023
+  Blynk.virtualWrite(V2, vacation_button_state * 1023);
 }
 
 void set_pump_state(uint8_t state) {
   Serial.printf("set led=%d\n", state);
 
   if (state == 1){
-    led0.on();
+    run_led.on();
   } else {
-    led0.off();
+    run_led.off();
   }
 #ifdef NODE_MCU
   state != state;
@@ -133,7 +151,7 @@ void pump_sched_timer() {
     case 0:
     case 1:
       if (second(t) % 15 == 0){
-        button_state = 1;
+        run_button_state = 1;
         show_time(t);
         snprintf(buf, 64, "Sched trigger");
         bprint(buf);
@@ -191,7 +209,7 @@ void bprint(char *buf) {
 
 void set_run_button(uint8_t state) {
   Blynk.virtualWrite(V1, state);
-  button_state = state;
+  run_button_state = state;
 }
 
 void setup()

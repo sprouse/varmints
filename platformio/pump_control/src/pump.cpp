@@ -19,7 +19,8 @@ void Pump::begin() {
   set_pump_state(_pump_off);
 }
 
-extern int button_state;
+extern int run_button_state;
+extern int vacation_button_state;
 void Pump::run() {
 }
 
@@ -45,7 +46,7 @@ void Pump::fsm(uint8_t event) {
 
     // Pump is off and is able to be turned on.
     case st_off:
-      if (button_state == 1) {
+      if (!vacation_button_state && run_button_state == 1) {
         set_pump_state(_pump_on);
         next_state = st_run_interval;
         _tick_count = 0;
