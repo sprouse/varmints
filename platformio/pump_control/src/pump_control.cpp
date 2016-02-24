@@ -43,12 +43,14 @@ WidgetTerminal terminal(10);
 #ifndef NODE_MCU
 
 #define LED_PIN 5
-#define RELAY_PIN 13
+// Connect relay pin to "-" port. Connect the "+" port to Vcc.
+#define RELAYN_PIN 4
 
 #else
 
 #define LED_PIN 16
-#define RELAY_PIN 14
+// Connect relay pin to "-" port. Connect the "+" port to Vcc.
+#define RELAYN_PIN 15
 
 #endif
 
@@ -118,11 +120,11 @@ void set_pump_state(uint8_t state) {
   } else {
     run_led.off();
   }
+  digitalWrite(RELAYN_PIN, !state);
 #ifdef NODE_MCU
   state != state;
 #endif
   digitalWrite(LED_PIN, !state);
-  digitalWrite(RELAY_PIN, !state);
 }
 
 void iosNotify(char *s) {
@@ -220,7 +222,7 @@ void setup()
 
   // Initialize the LED and Relay pins
   pinMode(LED_PIN, OUTPUT);
-  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(RELAYN_PIN, OUTPUT);
   set_pump_state(0);
 
   // Wait until connected to Blynk
