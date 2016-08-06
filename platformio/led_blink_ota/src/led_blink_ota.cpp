@@ -14,18 +14,36 @@ SimpleTimer timer;
 #define LED_PIN 5
 #else
 #define LED_PIN 16
+// Relay
+//#define LED_PIN 12
+// LED
+
+//#define LED_PIN 13
+
+//#define RELAY_ENABLED
+#ifdef RELAY_ENABLED
+#define RELAY_PIN 12
+#endif
 #endif
 
 bool led_state = 0;
 void timer_handler() {
   led_state = !led_state;
 
-  Serial.printf("Led = %d\n", led_state);
+  Serial.printf("Led = %d %d\n", led_state, LED_PIN);
   digitalWrite(LED_PIN, led_state);
+#ifdef RELAY_ENABLED
+  digitalWrite(RELAY_PIN, !led_state);
+#endif
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
 }
 
 void led_setup(){
   pinMode(LED_PIN, OUTPUT);
+#ifdef RELAY_ENABLED
+  pinMode(RELAY_PIN, OUTPUT);
+#endif
   timer.setInterval(PERIOD_MS, timer_handler);
 }
 
@@ -81,6 +99,10 @@ void OTA_setup() {
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  Serial.printf("LED pin is%d\n", LED_PIN);
+#ifdef RELAY_ENABLED
+  Serial.printf("Relay pin is%d\n", RELAY_PIN);
+#endif
 }
 
 void setup() {
