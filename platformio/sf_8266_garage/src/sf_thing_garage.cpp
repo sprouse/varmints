@@ -24,6 +24,7 @@
 #include "OTA_setup.h"
 #include <SimpleTimer.h>
 #include <Time.h>
+#include <Timezone.h>
 #include <WifiUdp.h>
 
 #include "Garage.h"
@@ -50,8 +51,16 @@ WidgetLED led0(0);
 
 SimpleTimer timer;
 
+// Set up Time Zone Rules
+// US Pacific Time Zone (San Jose)
+TimeChangeRule myDST = {"PDT", Second, Sun, Mar, 2, -7 * 60};
+TimeChangeRule mySTD = {"PST", First, Sun, Nov, 2, -8 * 60};
+Timezone myTZ(myDST, mySTD);
+
+TimeChangeRule *tcr;
+
 // Time Configurtion
-#define TIMEZONE -8
+#define TIMEZONE 0
 #define MSECS 1000L
 #define HOURS 3600L
 #define MINUTES 60L
@@ -145,7 +154,10 @@ void iosNotify(char *s) {
 /////////////////////// Timer Routines ////////////////////////
 void set_event_time(uint8_t op) {
   char buf[64];
-  snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(), day(), hour(), minute(), second());
+  time_t utc = now();
+  time_t t = myTZ.toLocal(utc, &tcr);
+
+  snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(t), day(t), hour(t), minute(t), second(t));
   setLCD(op, buf);
 }
 
@@ -172,17 +184,19 @@ void printDigits(int digits) {
 }
 
 void digitalClockDisplay() {
+  time_t utc = now();
+  time_t t = myTZ.toLocal(utc, &tcr);
   // digital clock display of the time
-  Serial.print(hour());
-  printDigits(minute());
-  printDigits(second());
+  Serial.print(hour(t));
+  printDigits(minute(t));
+  printDigits(second(t));
   Serial.print(" ");
 
-  Serial.print(month());
+  Serial.print(month(t));
   Serial.print("/");
-  Serial.print(day());
+  Serial.print(day(t));
   Serial.print("/");
-  Serial.print(year());
+  Serial.print(year(t));
   Serial.println();
 }
 
