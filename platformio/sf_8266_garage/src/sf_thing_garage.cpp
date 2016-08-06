@@ -31,6 +31,8 @@
 // Private wifi settings and Blynk auth token are in this file
 #include "wifi_settings.h"
 
+#undef DEBUG
+
 WidgetLED led0(0);
 
 // Physical Pins
@@ -42,7 +44,7 @@ WidgetLED led0(0);
 #else
 
 #define ledPin 16
-#define RELAY_PIN 14
+#define RELAY_PIN 0
 
 #endif
 
@@ -54,13 +56,14 @@ SimpleTimer timer;
 #define HOURS 3600L
 #define MINUTES 60L
 
-NTPClient timeClient("clock.psu.edu", TIMEZONE*HOURS, 12 * HOURS * MSECS);
+WiFiUDP ntpUDP;
 
+NTPClient timeClient(ntpUDP, "clock.psu.edu", TIMEZONE*HOURS, 12*HOURS*MSECS);
 
 Garage garage(RELAY_PIN);
 
 // Forward declarations
-long int get_time();
+long get_time();
 void digitalClockDisplay();
 
 int dummy_sensor;
@@ -151,8 +154,13 @@ void gate_open_wdt_expired() {
   garage.fsm(EV_OPEN_WDT);
 }
 
-long int get_time() {
-  return timeClient.getRawTime();
+long get_time() {
+  long ltime = timeClient.getEpochTime();
+#ifdef DEBUG
+  Serial.print("ntpTime: ");
+  Serial.println(ltime);
+#endif
+  return ltime;
 }
 
 void printDigits(int digits) {
