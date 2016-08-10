@@ -23,7 +23,8 @@
 #include "OTA_setup.h"
 #include <SimpleTimer.h>
 #include <Time.h>
-#include <WiFiUdp.h>
+
+#define DEBUG_TERM
 
 // Private wifi settings and Blynk auth token are in this file
 #include "wifi_settings.h"
@@ -47,9 +48,6 @@ WidgetTerminal terminal(10);
 
 #endif
 
-WiFiUDP Udp;
-unsigned int localPort = 2390;
-
 // Time Configurtion
 #define TIMEZONE -8
 #define MSECS 1000L
@@ -58,8 +56,8 @@ unsigned int localPort = 2390;
 
 SimpleTimer timer;
 
-#define PUMP_RUN_TIME_S 10
-#define PUMP_LOCKOUT_TIME_S 10
+#define PUMP_RUN_TIME_S 3
+#define PUMP_LOCKOUT_TIME_S 3
 unsigned int pump_countdown_timer = 0;
 unsigned int pump_lockout_timer = PUMP_LOCKOUT_TIME_S;
 
@@ -87,6 +85,11 @@ void pump_unlock(){
 }
 
 void pump_on(){
+static int on_count;
+#ifdef DEBUG_TERM
+  terminal.printf("Pump On = %d\n", on_count++);
+  terminal.flush();
+#endif
   digitalWrite(LED_PIN, LOW);
   digitalWrite(RELAYN_PIN, LOW);
   Blynk.virtualWrite(BLYNK_LED, 1023);
@@ -139,39 +142,58 @@ void pump_countdown(){
 }
 
 /////////////////  Network UDP ///////////////////
-void udp_parse(){
-  char packetBuffer[255];
-
-  int packetSize = Udp.parsePacket();
-  if (packetSize) {
-    Serial.print("Received packe of size ");
-    Serial.println(packetSize);
-    Serial.print("From ");
-    IPAddress remoteIp = Udp.remoteIP();
-    Serial.print(remoteIp);
-    Serial.print(", port ");
-    Serial.println(Udp.remotePort());
-
-    int len = Udp.read(packetBuffer, 255);
-    if (len > 0) {
-      packetBuffer[len] = 0;
-    }
-
+#if 1
+String cmd_parse(String packetBuffer){
     Serial.println("Contents:");
     Serial.print("\"");
     Serial.print(packetBuffer);
     Serial.println("\"");
 
-    String ReplyBuffer = String("Not Recongized");
-    if (strncmp("PUMP_ON", packetBuffer, 7) == 0) {
-      ReplyBuffer = String("Success");
+    if (strncmp("PUMP_ON", packetBuffer.c_str(), 7) == 0) {
       pump_start();
+      return String("Pump On");
     }
 
-    Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
-    Udp.write(ReplyBuffer.c_str());
-    Udp.endPacket();
+    return String("Unknown Cmd");
+}
+#endif
+
+///////////////// Network TCP /////////////////////////////////
+WiFiServer server(2390);
+WiFiClient client;
+#define CLIENT_TIMEOUT (30 * MSECS)
+long client_wdt;
+
+void tcp_run() {
+  if (!client.connected()) {
+    client = server.available();
+    client_wdt = CLIENT_TIMEOUT;
   }
+
+  if (!client) {
+    return;
+  }
+
+  if (!client.available()) {
+    if (client_wdt == 0) {
+      client.stop();
+    } else {
+      client_wdt--;
+      delay(1); // Delay 1ms
+    }
+    return;
+  } 
+
+  Serial.println("new client");
+
+  String req = client.readStringUntil('\r');
+  Serial.println(req);
+  client.flush();
+
+  String s = cmd_parse(req);
+
+  client.print(s);
+  client.stop(); // Terminate the client
 }
 
 /////////////////////// Blynk Routines ////////////////////////
@@ -225,12 +247,14 @@ void setup()
   Serial.printf("Set 1 sec fsm interval\n");
   timer.setInterval(PUMP_FSM_INTERVAL_S, pump_countdown); 
 
-  Udp.begin(localPort);
+  // Udp.begin(localPort);
+  server.begin();
+  Serial.println("Server started");
 }
 
 void loop()
 {
-  udp_parse();
+  tcp_run();
   Blynk.run();
   timer.run();
   ArduinoOTA.handle();
