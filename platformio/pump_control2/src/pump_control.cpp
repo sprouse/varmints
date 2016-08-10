@@ -161,7 +161,7 @@ String cmd_parse(String packetBuffer){
 ///////////////// Network TCP /////////////////////////////////
 WiFiServer server(2390);
 WiFiClient client;
-#define CLIENT_TIMEOUT (30 * MSECS)
+#define CLIENT_TIMEOUT (10 * MSECS)
 long client_wdt;
 
 void tcp_run() {
