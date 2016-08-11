@@ -20,17 +20,20 @@
 #include <BlynkSimpleEsp8266.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
-#include "OTA_setup.h"
+#include <NTPClient.h>
 #include <SimpleTimer.h>
 #include <Time.h>
+#include <Timezone.h>
+#include <WifiUdp.h>
+
+#include "OTA_setup.h"
 
 #define DEBUG_TERM
 
 // Private wifi settings and Blynk auth token are in this file
 #include "wifi_settings.h"
+void update_time_str();
 
-WidgetLED run_led(V0);
-WidgetLED vac_led(V2);
 WidgetTerminal terminal(10);
 
 // Physical Pins
@@ -49,7 +52,7 @@ WidgetTerminal terminal(10);
 #endif
 
 // Time Configurtion
-#define TIMEZONE -8
+#define TIMEZONE 0
 #define MSECS 1000L
 #define HOURS 3600L
 #define MINUTES 60L
@@ -62,6 +65,20 @@ unsigned int pump_countdown_timer = 0;
 unsigned int pump_lockout_timer = PUMP_LOCKOUT_TIME_S;
 
 #define PUMP_FSM_INTERVAL_S 1 * MSECS
+
+// NTP Client
+// Set up Time Zone Rules
+// US Pacific Time Zone (San Jose)
+TimeChangeRule myDST = {"PDT", Second, Sun, Mar, 2, -7 * 60};
+TimeChangeRule mySTD = {"PST", First, Sun, Nov, 2, -8 * 60};
+Timezone myTZ(myDST, mySTD);
+TimeChangeRule *tcr;
+
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "clock.psu.edu", TIMEZONE*HOURS, 12*HOURS*MSECS);
+
+#define BUF_LEN 64
+char time_buf[BUF_LEN];
 
 // Blynk
 int run_button_state = 0;
@@ -80,6 +97,11 @@ void pump_lock(){
 }
 
 void pump_unlock(){
+#ifdef DEBUG_TERM
+  update_time_str();
+  terminal.printf("%s: Pump Unlock\n", time_buf);
+  terminal.flush();
+#endif
   Serial.println("Pump unlocked");
   Blynk.virtualWrite(LOCK_LED, 0);
 }
@@ -87,18 +109,25 @@ void pump_unlock(){
 void pump_on(){
 static int on_count;
 #ifdef DEBUG_TERM
-  terminal.printf("Pump On = %d\n", on_count++);
+  update_time_str();
+  terminal.printf("=======================\n");
+  terminal.printf("%s: Pump On = %d\n", time_buf, on_count++);
   terminal.flush();
 #endif
   digitalWrite(LED_PIN, LOW);
-  digitalWrite(RELAYN_PIN, LOW);
+  digitalWrite(RELAYN_PIN, HIGH);
   Blynk.virtualWrite(BLYNK_LED, 1023);
   Serial.println("Pump starting");
 }
 
 void pump_off(){
+#ifdef DEBUG_TERM
+  update_time_str();
+  terminal.printf("%s: Pump Off/Locked\n", time_buf);
+  terminal.flush();
+#endif
   digitalWrite(LED_PIN, HIGH);
-  digitalWrite(RELAYN_PIN, HIGH);
+  digitalWrite(RELAYN_PIN, LOW);
   Blynk.virtualWrite(BLYNK_LED, 0);
   Serial.println("Pump off");
   pump_lock();
@@ -217,6 +246,19 @@ void iosNotify(char *s) {
   Blynk.email("sprouses@gmail.com", "Subject: Garage Open", s);
 }
 
+//////////////////////// NTP //////////////////////
+long get_time() {
+  long ltime = timeClient.getEpochTime();
+  return ltime;
+}
+
+void update_time_str() {
+  time_t utc = now();
+  time_t t = myTZ.toLocal(utc, &tcr);
+  snprintf(time_buf, BUF_LEN, "%d.%d %02d:%02d:%02d %s",
+    month(t), day(t), hour(t), minute(t), second(), tcr);
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -243,6 +285,12 @@ void setup()
 
   OTA_setup();
 
+  // Initialzie the NTP Client
+  timeClient.update();
+  setSyncProvider(get_time);
+  terminal.printf("NTP Ready\n");
+  terminal.flush();
+
   // Set a 1 sec timer to call the pump fsm.
   Serial.printf("Set 1 sec fsm interval\n");
   timer.setInterval(PUMP_FSM_INTERVAL_S, pump_countdown); 
@@ -250,6 +298,8 @@ void setup()
   // Udp.begin(localPort);
   server.begin();
   Serial.println("Server started");
+  terminal.printf("TCP Ready\n");
+  terminal.flush();
 }
 
 void loop()
