@@ -32,7 +32,10 @@
 
 // Private wifi settings and Blynk auth token are in this file
 #include "wifi_settings.h"
+
+// Forward declartions
 void update_time_str();
+void send_status_to_indigo(char *s);
 
 WidgetTerminal terminal(10);
 
@@ -104,6 +107,7 @@ void pump_unlock(){
 #endif
   Serial.println("Pump unlocked");
   Blynk.virtualWrite(LOCK_LED, 0);
+  send_status_to_indigo("PUMP_UNLOCK");
 }
 
 void pump_on(){
@@ -118,6 +122,7 @@ static int on_count;
   digitalWrite(RELAYN_PIN, HIGH);
   Blynk.virtualWrite(BLYNK_LED, 1023);
   Serial.println("Pump starting");
+  send_status_to_indigo("PUMP_ON");
 }
 
 void pump_off(){
@@ -131,6 +136,7 @@ void pump_off(){
   Blynk.virtualWrite(BLYNK_LED, 0);
   Serial.println("Pump off");
   pump_lock();
+  send_status_to_indigo("PUMP_OFF");
 }
 /////////////////////// Timer Routines ////////////////////////
 void pump_start() {
@@ -187,7 +193,7 @@ String cmd_parse(String packetBuffer){
 }
 #endif
 
-///////////////// Network TCP /////////////////////////////////
+///////////////// Network TCP Server/////////////////////////////////
 WiFiServer server(2390);
 WiFiClient client;
 #define CLIENT_TIMEOUT (10 * MSECS)
@@ -223,6 +229,22 @@ void tcp_run() {
 
   client.print(s);
   client.stop(); // Terminate the client
+}
+
+///////////////// Network TCP Client/////////////////////////////////
+// Used to send status to the Indigo Server
+WiFiClient indigo_client;
+IPAddress indigo_server(192,168,2,14);
+#define INDIGO_PORT 2390
+
+void send_status_to_indigo(char *s) {
+  indigo_client.stop();
+
+  if (indigo_client.connect(indigo_server, INDIGO_PORT)) {
+    indigo_client.println(s);
+  }
+  
+  indigo_client.stop();
 }
 
 /////////////////////// Blynk Routines ////////////////////////
