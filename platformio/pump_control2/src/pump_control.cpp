@@ -62,8 +62,13 @@ WidgetTerminal terminal(10);
 
 SimpleTimer timer;
 
-#define PUMP_RUN_TIME_S 3
+#if 1
+#define PUMP_RUN_TIME_S 3 * MINUTES
+#define PUMP_LOCKOUT_TIME_S 20 * MINUTES
+#else
+#define PUMP_RUN_TIME_S 4
 #define PUMP_LOCKOUT_TIME_S 3
+#endif
 unsigned int pump_countdown_timer = 0;
 unsigned int pump_lockout_timer = PUMP_LOCKOUT_TIME_S;
 
@@ -96,7 +101,7 @@ int run_button_state = 0;
 void pump_lock(){
   Serial.println("Pump locked");
   Blynk.virtualWrite(LOCK_LED, 1023);
-  pump_lockout_timer = PUMP_LOCKOUT_TIME_S;
+  pump_lockout_timer = PUMP_LOCKOUT_TIME_S + 2;
 }
 
 void pump_unlock(){
@@ -150,7 +155,7 @@ void pump_start() {
   }
 
   pump_on();
-  pump_countdown_timer = PUMP_RUN_TIME_S;
+  pump_countdown_timer = PUMP_RUN_TIME_S + 2;
 }
 
 void pump_countdown(){
