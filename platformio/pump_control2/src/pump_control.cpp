@@ -94,7 +94,6 @@ int run_button_state = 0;
 #define BLYNK_LED       V0
 #define RUN_BUTTON      V1
 #define LOCK_LED        V2
-#define VAC_BUTTON      V3
 #define LOCAL_IP        V4
 #define LOCAL_TCP_PORT  V5
 #define INDIGO_IP       V6
