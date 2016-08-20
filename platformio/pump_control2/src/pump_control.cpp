@@ -35,7 +35,7 @@
 
 // Forward declartions
 void update_time_str();
-void send_status_to_indigo(char *s);
+void send_status_to_indigo(const char *s);
 
 WidgetTerminal terminal(10);
 
@@ -63,11 +63,11 @@ WidgetTerminal terminal(10);
 SimpleTimer timer;
 
 #if 1
-#define PUMP_RUN_TIME_S 3 * MINUTES
-#define PUMP_LOCKOUT_TIME_S 20 * MINUTES
+#define PUMP_RUN_TIME_S (3 * MINUTES)
+#define PUMP_LOCKOUT_TIME_S (20 * MINUTES)
 #else
-#define PUMP_RUN_TIME_S 4
-#define PUMP_LOCKOUT_TIME_S 3
+#define PUMP_RUN_TIME_S (3 * MINUTES)
+#define PUMP_LOCKOUT_TIME_S (30)
 #endif
 unsigned int pump_countdown_timer = 0;
 unsigned int pump_lockout_timer = PUMP_LOCKOUT_TIME_S;
@@ -91,12 +91,15 @@ char time_buf[BUF_LEN];
 // Blynk
 int run_button_state = 0;
 // Virtual Pins
-#define BLYNK_LED   V0
-#define RUN_BUTTON  V1
-#define LOCK_LED     V2
-#define VAC_BUTTON  V3
-#define TERMINAL    V10
-
+#define BLYNK_LED       V0
+#define RUN_BUTTON      V1
+#define LOCK_LED        V2
+#define VAC_BUTTON      V3
+#define LOCAL_IP        V4
+#define LOCAL_TCP_PORT  V5
+#define INDIGO_IP       V6
+#define BLYNK_LOCKOUT   V7
+#define TERMINAL        V10
 /////////////////////// Pump Control ////////////////////////
 void pump_lock(){
   Serial.println("Pump locked");
@@ -199,7 +202,8 @@ String cmd_parse(String packetBuffer){
 #endif
 
 ///////////////// Network TCP Server/////////////////////////////////
-WiFiServer server(2390);
+#define INDIGO_PORT 2390
+WiFiServer server(INDIGO_PORT);
 WiFiClient client;
 #define CLIENT_TIMEOUT (10 * MSECS)
 long client_wdt;
@@ -240,9 +244,8 @@ void tcp_run() {
 // Used to send status to the Indigo Server
 WiFiClient indigo_client;
 IPAddress indigo_server(192,168,2,14);
-#define INDIGO_PORT 2390
 
-void send_status_to_indigo(char *s) {
+void send_status_to_indigo(const char *s) {
   indigo_client.stop();
 
   if (indigo_client.connect(indigo_server, INDIGO_PORT)) {
@@ -271,6 +274,37 @@ BLYNK_WRITE(RUN_BUTTON)
 void iosNotify(char *s) {
   Blynk.notify(s);
   Blynk.email("sprouses@gmail.com", "Subject: Garage Open", s);
+}
+
+
+BLYNK_READ(LOCAL_IP) //Function to display the local IP address
+{
+    char myIpString[24];
+    IPAddress myIp = WiFi.localIP();
+    sprintf(myIpString, "%d.%d.%d.%d", myIp[0], myIp[1], myIp[2], myIp[3]);
+    Blynk.virtualWrite(LOCAL_IP, myIpString);
+}
+
+BLYNK_READ(INDIGO_IP) //Function to display the local IP address
+{
+    char myIpString[24];
+    IPAddress myIp = indigo_server;
+    sprintf(myIpString, "%d.%d.%d.%d", myIp[0], myIp[1], myIp[2], myIp[3]);
+    Blynk.virtualWrite(INDIGO_IP, myIpString);
+}
+
+BLYNK_READ(LOCAL_TCP_PORT) //Function to display the local IP address
+{
+    Blynk.virtualWrite(LOCAL_TCP_PORT, INDIGO_PORT);
+}
+
+BLYNK_READ(BLYNK_LOCKOUT) //Function to display the local IP address
+{
+    char myString[24];
+    int m = pump_lockout_timer / 60;
+    int s = pump_lockout_timer % 60;
+    sprintf(myString, "% 2dm %2ds", m, s);
+    Blynk.virtualWrite(BLYNK_LOCKOUT, myString);
 }
 
 //////////////////////// NTP //////////////////////
@@ -303,6 +337,11 @@ void setup()
     Serial.print(".");
     delay(1000);
   }
+
+    char myIpString[24];
+    IPAddress myIp = WiFi.localIP();
+    sprintf(myIpString, "%d.%d.%d.%d", myIp[0], myIp[1], myIp[2], myIp[3]);
+    Blynk.virtualWrite(LOCAL_IP, myIpString);
 
   // Set lock after Blynk is online
   pump_lock();
