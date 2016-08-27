@@ -64,7 +64,7 @@ SimpleTimer timer;
 
 #if 1
 #define PUMP_RUN_TIME_S (3 * MINUTES)
-#define PUMP_LOCKOUT_TIME_S (20 * MINUTES)
+#define PUMP_LOCKOUT_TIME_S (15 * MINUTES)
 #else
 #define PUMP_RUN_TIME_S (3 * MINUTES)
 #define PUMP_LOCKOUT_TIME_S (30)
@@ -112,6 +112,7 @@ void pump_unlock(){
   terminal.printf("%s: Pump Unlock\n", time_buf);
   terminal.flush();
 #endif
+  pump_countdown_timer = 0;
   pump_lockout_timer = 0;
   Serial.println("Pump unlocked");
   Blynk.virtualWrite(LOCK_LED, 0);
@@ -272,7 +273,7 @@ BLYNK_WRITE(RUN_BUTTON)
 }
 
 // Blynk button to run the pump
-BLYNK_WRITE(OVERRIDE_BUTTON) 
+BLYNK_WRITE(LOCK_OVERRIDE) 
 {
   int override_button_state = param.asInt();
   Serial.println("=======");
@@ -282,6 +283,7 @@ BLYNK_WRITE(OVERRIDE_BUTTON)
   terminal.flush();
 #endif
   if (override_button_state == 1) {
+    pump_off();
     pump_unlock();
   }
 }
