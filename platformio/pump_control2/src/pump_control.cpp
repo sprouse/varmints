@@ -89,7 +89,6 @@ NTPClient timeClient(ntpUDP, "clock.psu.edu", TIMEZONE*HOURS, 12*HOURS*MSECS);
 char time_buf[BUF_LEN];
 
 // Blynk
-int run_button_state = 0;
 // Virtual Pins
 #define BLYNK_LED       V0
 #define RUN_BUTTON      V1
@@ -98,6 +97,7 @@ int run_button_state = 0;
 #define LOCAL_TCP_PORT  V5
 #define INDIGO_IP       V6
 #define BLYNK_LOCKOUT   V7
+#define LOCK_OVERRIDE   V8
 #define TERMINAL        V10
 /////////////////////// Pump Control ////////////////////////
 void pump_lock(){
@@ -112,6 +112,7 @@ void pump_unlock(){
   terminal.printf("%s: Pump Unlock\n", time_buf);
   terminal.flush();
 #endif
+  pump_lockout_timer = 0;
   Serial.println("Pump unlocked");
   Blynk.virtualWrite(LOCK_LED, 0);
   send_status_to_indigo("PUMP_UNLOCK");
@@ -258,7 +259,7 @@ void send_status_to_indigo(const char *s) {
 // Blynk button to run the pump
 BLYNK_WRITE(RUN_BUTTON) 
 {
-  run_button_state = param.asInt();
+  int run_button_state = param.asInt();
   Serial.println("=======");
   Serial.printf("Button V1 = %u\n", run_button_state);
 #ifdef DEBUG_TERM
@@ -267,6 +268,21 @@ BLYNK_WRITE(RUN_BUTTON)
 #endif
   if (run_button_state == 1) {
     pump_start();
+  }
+}
+
+// Blynk button to run the pump
+BLYNK_WRITE(OVERRIDE_BUTTON) 
+{
+  int override_button_state = param.asInt();
+  Serial.println("=======");
+  Serial.printf("Button Lock Override = %u\n", override_button_state);
+#ifdef DEBUG_TERM
+  terminal.printf("Button Lock Override = %u\n", override_button_state);
+  terminal.flush();
+#endif
+  if (override_button_state == 1) {
+    pump_unlock();
   }
 }
 
