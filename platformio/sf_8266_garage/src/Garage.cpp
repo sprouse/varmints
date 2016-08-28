@@ -1,4 +1,5 @@
 #include "Arduino.h"
+#include "indigo.h"
 #include "Garage.h"
 #include <Time.h>
 
@@ -67,6 +68,7 @@ void Garage::fsm(uint8_t event) {
     case st_closed:
       if (event == EV_OPENED) {
         garage_open();
+        send_status_to_indigo("GARAGE_OPEN");
         next_state = st_open;
 
       }
@@ -74,6 +76,7 @@ void Garage::fsm(uint8_t event) {
     case st_open:
       if (event == EV_CLOSED) {
         garage_closed();
+        send_status_to_indigo("GARAGE_CLOSED");
         next_state = st_closed;
       } else if (event == EV_OPEN_WDT) {
         char buf[256];
