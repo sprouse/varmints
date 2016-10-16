@@ -56,23 +56,23 @@ WidgetTerminal terminal(10);
 
 // Time Configurtion
 #define TIMEZONE 0
-#define MSECS 1000L
+#define MSEC_PER_SEC 1000L
 #define HOURS 3600L
 #define MINUTES 60L
 
 SimpleTimer timer;
 
 #if 1
-#define PUMP_RUN_TIME_S (3 * MINUTES)
+#define PUMP_RUN_TIME_S (4 * MINUTES)
 #define PUMP_LOCKOUT_TIME_S (15 * MINUTES)
 #else
-#define PUMP_RUN_TIME_S (3 * MINUTES)
+#define PUMP_RUN_TIME_S (4 * MINUTES)
 #define PUMP_LOCKOUT_TIME_S (30)
 #endif
 unsigned int pump_countdown_timer = 0;
 unsigned int pump_lockout_timer = PUMP_LOCKOUT_TIME_S;
 
-#define PUMP_FSM_INTERVAL_S 1 * MSECS
+#define PUMP_FSM_INTERVAL_S 1 * MSEC_PER_SEC
 
 // NTP Client
 // Set up Time Zone Rules
@@ -83,7 +83,7 @@ Timezone myTZ(myDST, mySTD);
 TimeChangeRule *tcr;
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "clock.psu.edu", TIMEZONE*HOURS, 12*HOURS*MSECS);
+NTPClient timeClient(ntpUDP, "clock.psu.edu", TIMEZONE*HOURS, 12*HOURS*MSEC_PER_SEC);
 
 #define BUF_LEN 64
 char time_buf[BUF_LEN];
@@ -206,7 +206,7 @@ String cmd_parse(String packetBuffer){
 #define INDIGO_PORT 2390
 WiFiServer server(INDIGO_PORT);
 WiFiClient client;
-#define CLIENT_TIMEOUT (10 * MSECS)
+#define CLIENT_TIMEOUT (10 * MSEC_PER_SEC)
 long client_wdt;
 
 void tcp_run() {
