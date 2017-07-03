@@ -17,16 +17,12 @@
 
 #define BLYNK_PRINT Serial // Comment this out to disable prints and save space
 #include <ArduinoOTA.h>
-#include <BlynkSimpleEsp8266.h>
 #include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
 #include <ESP8266mDNS.h>
-#include <NTPClient.h>
 #include <WidgetRTC.h>
 #include "OTA_setup.h"
 #include <SimpleTimer.h>
-//#include <Time.h>
-//#include <Timezone.h>
-//#include <WifiUdp.h>
 
 #include "Garage.h"
 
@@ -46,7 +42,7 @@ WidgetLED led0(0);
 #else
 
 #define ledPin 16
-#define RELAY_PIN 0
+#define RELAY_PIN 4
 
 #endif
 
@@ -175,6 +171,12 @@ void digitalClockDisplay() {
 time_t time_open;
 time_t time_closed;
 
+
+BLYNK_CONNECTED() {
+  // Synchronize time on connection
+  rtc.begin();
+}
+
 void setup()
 {
   Serial.begin(9600);
@@ -188,17 +190,9 @@ void setup()
   // Initialize the relay input pin
   pinMode(RELAY_PIN, INPUT_PULLUP);
 
-  // Wait until connected to Blynk
-  while (Blynk.connect() == false) {
-    Serial.print(".");
-    delay(500);
-  }
-
   OTA_setup();
 
-    rtc.begin();
-
-	// Initialize the LCD
+    // Initialize the LCD
 	set_event_time(0);
 	setLCD(EV_CLOSED, "NA");
 }
