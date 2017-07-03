@@ -49,6 +49,7 @@ WidgetLED led0(0);
 SimpleTimer timer;
 
 WidgetRTC rtc;
+WidgetTerminal terminal(V10);
 
 Garage garage(RELAY_PIN);
 
@@ -167,6 +168,16 @@ void digitalClockDisplay() {
   Serial.println();
 }
 
+char s[64];
+char* now_str(){
+    sprintf(s, "%d/%d %d:%02d",
+        month(),
+        year(),
+        hour(),
+        minute());
+    return s;
+}
+
 
 time_t time_open;
 time_t time_closed;
@@ -175,26 +186,22 @@ time_t time_closed;
 BLYNK_CONNECTED() {
     // Synchronize time on connection
     rtc.begin();
-    // Initialize the LCD
-    set_event_time(0);
-    setLCD(EV_CLOSED, "NA");
 }
 
 void setup()
 {
-  Serial.begin(9600);
-  Serial.print("\nStarting\n");
-  Blynk.begin(auth, WIFI_SSID, WIFI_KEY);
+    Serial.begin(9600);
+    Serial.print("\nStarting\n");
+    Blynk.begin(auth, WIFI_SSID, WIFI_KEY);
 
-  // Initialize the LED pin
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, 0);
-
-  // Initialize the relay input pin
-  pinMode(RELAY_PIN, INPUT_PULLUP);
-
-  OTA_setup();
-
+    // Initialize the LED pin
+    pinMode(ledPin, OUTPUT);
+    digitalWrite(ledPin, 0);
+    
+    // Initialize the relay input pin
+    pinMode(RELAY_PIN, INPUT_PULLUP);
+    
+    OTA_setup();
 }
 
 void loop()

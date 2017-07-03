@@ -38,10 +38,12 @@ void Garage::begin() {
   pinMode(_relay_pin, INPUT);
 }
 
-extern int dummy_sensor;
 void Garage::run() {
+  // If the RTC has not yet sync'd then times are meaningless.
+  if (year() == 1970){
+    return;
+  }
   int new_sensor = digitalRead(_relay_pin);
-  //int new_sensor = dummy_sensor;
   if (new_sensor != _sensor_state) {
     if (new_sensor) {
       _event = EV_OPENED;
