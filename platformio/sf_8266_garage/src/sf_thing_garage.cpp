@@ -173,8 +173,11 @@ time_t time_closed;
 
 
 BLYNK_CONNECTED() {
-  // Synchronize time on connection
-  rtc.begin();
+    // Synchronize time on connection
+    rtc.begin();
+    // Initialize the LCD
+    set_event_time(0);
+    setLCD(EV_CLOSED, "NA");
 }
 
 void setup()
@@ -192,9 +195,6 @@ void setup()
 
   OTA_setup();
 
-    // Initialize the LCD
-	set_event_time(0);
-	setLCD(EV_CLOSED, "NA");
 }
 
 void loop()
