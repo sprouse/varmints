@@ -263,7 +263,7 @@ void setup()
     OTA_setup();
 
     //timer_rtc_id = timer.setInterval(1000, check_rtc);
-    timer_mon_id = timer.setInterval(5000, monitor_timer);
+    //timer_mon_id = timer.setInterval(5000, monitor_timer);
 }
 
 void loop()
