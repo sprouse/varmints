@@ -1,24 +1,51 @@
-#include "Arduino.h"
-#include "indigo.h"
-#include "Garage.h"
-#include <Time.h>
+#define GARAGE_OPEN_TIMEOUT_MIN 10
 
-extern SimpleTimer timer;
-extern void gate_open_wdt_expired();
+class Garage
+{
+  private:
+		enum _state_t {
+			st_closed,
+			st_open
+		};
+
+		_state_t _state;
+    int _sensor_state;
+    int _led_vpin;
+    int _relay_pin;
+    time_t _time_opened;
+    time_t _time_closed;
+    int _wdt_id;
+    int _led_state;
+    int _event;
+
+  public:
+    Garage(uint8_t sensor_pin);
+    void run();
+    byte led_state();
+    void fsm(uint8_t event);
+
+  private:
+    void garage_open();
+    void garage_closed();
+    void garage_led(int state);
+    void begin();
+};
 
 Garage::Garage(uint8_t relay_pin) {
   _state = st_closed;
-  //setLED(OFF);
   _relay_pin = relay_pin;
   _wdt_id = -1;
+  _led_state = UNKNOWN;
 }
 
 void Garage::garage_open() {
   setLED(ON);
   _time_opened = now();
   Serial.printf("Set WDT\n");
+  term_msg("Set WDT");
 
-  _wdt_id = timer.setTimer(GARAGE_OPEN_TIMEOUT_MIN * 60 * 1000L, gate_open_wdt_expired, 3); //Give three notifications
+  _wdt_id = timer.setTimer(GARAGE_OPEN_TIMEOUT_MIN * 60 * 1000L,
+                           gate_open_wdt_expired, 3); //Give three notifications
 
   set_event_time(EV_OPENED);
 }
@@ -30,6 +57,7 @@ void Garage::garage_closed() {
   _wdt_id = -1;
   set_event_time(EV_CLOSED);
   Serial.printf("Deleted WDT\n");
+  term_msg("Deleted WDT");
 }
 
 void Garage::begin() {
@@ -39,11 +67,13 @@ void Garage::begin() {
 }
 
 void Garage::run() {
-  // If the RTC has not yet sync'd then times are meaningless.
+  int new_sensor = digitalRead(_relay_pin);
+  setLED(new_sensor);
+  // If the RTC has not yet sync'd only update the LED state.
   if (year() == 1970){
     return;
   }
-  int new_sensor = digitalRead(_relay_pin);
+
   if (new_sensor != _sensor_state) {
     if (new_sensor) {
       _event = EV_OPENED;
@@ -96,6 +126,13 @@ void Garage::fsm(uint8_t event) {
 
   if (_state != next_state) {
     Serial.printf("State: %d => %d\n", _state, next_state);
+
+    String s = String(event);
+    s += ":";
+    s += String(_state);;
+    s += "->";
+    s += String(next_state);;
+    term_msg(s);
   }
   _state = next_state;
 }

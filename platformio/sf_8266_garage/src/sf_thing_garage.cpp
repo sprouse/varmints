@@ -23,11 +23,26 @@
 #include <WidgetRTC.h>
 #include "OTA_setup.h"
 #include <SimpleTimer.h>
-
-#include "Garage.h"
+#include <Time.h>
 
 // Private wifi settings and Blynk auth token are in this file
 #include "wifi_settings.h"
+
+#include "config.h"
+#include "indigo.h"
+
+// Globals
+SimpleTimer timer;
+
+// Forward Decls
+
+void gate_open_wdt_expired();
+void term_msg(String s);
+void setLED(uint8_t state);
+void set_event_time(uint8_t op);
+void iosNotify(char *s);
+
+#include "Garage2.h"
 
 #undef DEBUG
 
@@ -46,7 +61,6 @@ WidgetLED led0(0);
 
 #endif
 
-SimpleTimer timer;
 
 WidgetRTC rtc;
 WidgetTerminal terminal(V10);
@@ -69,6 +83,25 @@ int dummy_sensor;
 #define BLYNK_LCD_ROW0 4
 #define BLYNK_LCD_ROW1 5
 
+String now_str(){
+    String s;
+    s = String(month()) + "/";
+    s += String(day()) + " ";
+    s += String(hour()) + ":";
+    int m = minute();
+    if (m < 10) 
+        s += "0";
+    s += String(m);
+    s += "- ";
+    return s;
+}
+
+void term_msg(String s){
+    terminal.print(now_str());
+    terminal.println(s);
+    terminal.flush();
+}
+
 /////////////////////// Blynk Routines ////////////////////////
 // Blynk Button simulates garage open or closed.
 BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
@@ -78,14 +111,23 @@ BLYNK_WRITE(DUMMY_BUTTON) //Button Widget is writing to pin V2
   Serial.printf("Button V1 = %u\n", dummy_sensor);
 }
 
+uint8_t last_led_state = UNKNOWN;
 void setLED(uint8_t state) {
-  Serial.printf("set led=%d\n", state);
-  if (state == 1){
-    led0.on();
-  } else {
-    led0.off();
-  }
-  digitalWrite(ledPin, state);
+    if (!Blynk.connected())
+        return;
+    if (state == last_led_state)
+        return;
+    Serial.printf("set led=%d\n", state);
+    terminal.print(now_str());
+    terminal.printf("set led=%d\n", state);
+    terminal.flush();
+    if (state == ON){
+        led0.on();
+    } else {
+        led0.off();
+    }
+    digitalWrite(ledPin, state);
+    last_led_state = state;
 }
 
 char lcd_buf[2][64];
@@ -99,7 +141,6 @@ void refreshLCD(uint8_t op) {
 	} 
   //Serial.printf("refresh lcd: %d\n", vpin);
   Blynk.virtualWrite(vpin, buf);
-  setLED(garage.led_state());
 }
 
 void setLCD(uint8_t op, char const *buf) {
@@ -117,13 +158,11 @@ BLYNK_READ(BLYNK_LCD_0) // Serve data to Temperature Gauge
 {
 	Serial.printf("lcd0 read\n");
   Blynk.virtualWrite(BLYNK_LCD_0, lcd_buf[0]);
-  setLED(garage.led_state());
 }
 
 BLYNK_READ(BLYNK_LCD_1) // Serve data to Temperature Gauge
 {
 	Serial.printf("lcd1 read\n");
-  setLED(garage.led_state());
   Blynk.virtualWrite(BLYNK_LCD_1, lcd_buf[1]);
 }
 
@@ -141,7 +180,11 @@ void set_event_time(uint8_t op) {
 }
 
 void gate_open_wdt_expired() {
-  Serial.printf("WDT!\n");
+  Serial.printf("WDT Expired!\n");
+  Serial.flush();
+  terminal.print(now_str());
+  terminal.println("WDT");
+  terminal.flush();
   garage.fsm(EV_OPEN_WDT);
 }
 
@@ -168,17 +211,6 @@ void digitalClockDisplay() {
   Serial.println();
 }
 
-char s[64];
-char* now_str(){
-    sprintf(s, "%d/%d %d:%02d",
-        month(),
-        year(),
-        hour(),
-        minute());
-    return s;
-}
-
-
 time_t time_open;
 time_t time_closed;
 
@@ -186,6 +218,33 @@ time_t time_closed;
 BLYNK_CONNECTED() {
     // Synchronize time on connection
     rtc.begin();
+    Blynk.run();
+    delay(100);
+    Blynk.run();
+    terminal.print(now_str());
+    terminal.println("Booting...");
+    terminal.flush();
+    Blynk.syncAll();
+}
+
+int timer_rtc_id;
+void check_rtc(){
+    terminal.println(" RTC check.");
+    terminal.flush();
+    if (year() == 1970)
+        return;
+
+    terminal.print(now_str());
+    terminal.println(" RTC sync.");
+    terminal.flush();
+
+    timer.disable(timer_rtc_id);
+}
+
+int timer_mon_id;
+void monitor_timer(){
+    Serial.printf("Num timers=%d\n",timer.getNumTimers());
+    Serial.flush();
 }
 
 void setup()
@@ -202,6 +261,9 @@ void setup()
     pinMode(RELAY_PIN, INPUT_PULLUP);
     
     OTA_setup();
+
+    //timer_rtc_id = timer.setInterval(1000, check_rtc);
+    timer_mon_id = timer.setInterval(5000, monitor_timer);
 }
 
 void loop()

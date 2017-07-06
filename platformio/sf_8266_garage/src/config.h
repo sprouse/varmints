@@ -5,4 +5,5 @@
 
 #define OFF 0
 #define ON 1
+#define UNKNOWN 0x0f
 
