@@ -48,6 +48,7 @@ void Garage::garage_open() {
                            gate_open_wdt_expired, 3); //Give three notifications
 
   set_event_time(EV_OPENED);
+  mqtt_publish_garage_status("OPEN");
 }
 
 void Garage::garage_closed() {
@@ -58,6 +59,7 @@ void Garage::garage_closed() {
   set_event_time(EV_CLOSED);
   Serial.printf("Deleted WDT\n");
   term_msg("Deleted WDT");
+  mqtt_publish_garage_status("CLOSED");
 }
 
 void Garage::begin() {

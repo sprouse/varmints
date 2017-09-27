@@ -22,6 +22,7 @@
 #include <ESP8266mDNS.h>
 #include <WidgetRTC.h>
 #include "OTA_setup.h"
+#include "PubSubClient.h"
 #include <SimpleTimer.h>
 #include <Time.h>
 
@@ -30,6 +31,7 @@
 
 #include "config.h"
 #include "indigo.h"
+#include "mqtt.h"
 
 // Globals
 SimpleTimer timer;
@@ -247,6 +249,7 @@ void monitor_timer(){
     Serial.flush();
 }
 
+////////////// Setup /////////////////////
 void setup()
 {
     Serial.begin(9600);
@@ -264,6 +267,7 @@ void setup()
 
     //timer_rtc_id = timer.setInterval(1000, check_rtc);
     //timer_mon_id = timer.setInterval(5000, monitor_timer);
+    mqtt_setup();
 }
 
 void loop()
@@ -272,5 +276,6 @@ void loop()
   timer.run();
   garage.run();
   ArduinoOTA.handle();
+  mqtt_run();
 }
 
