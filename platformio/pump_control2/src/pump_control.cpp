@@ -21,12 +21,19 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <NTPClient.h>
+#include <PubSubClient.h>
 #include <SimpleTimer.h>
 #include <Time.h>
 #include <Timezone.h>
 #include <WifiUdp.h>
 
+WiFiClient client;
+
 #include "OTA_setup.h"
+
+
+#define MQTT_PUMP_STATUS "home/pump/status"
+#define MQTT_PUMP_CMD "home/pump/cmd"
 
 #define DEBUG_TERM
 
@@ -35,7 +42,11 @@
 
 // Forward declartions
 void update_time_str();
-void send_status_to_indigo(const char *s);
+void send_status_to_mqtt(const char* s);
+void send_last_status_to_mqtt();
+void mqtt_sub_callback(char* topic, byte* msg, unsigned int length);
+
+#include "mqtt.h"
 
 WidgetTerminal terminal(10);
 
@@ -66,8 +77,8 @@ SimpleTimer timer;
 #define PUMP_RUN_TIME_S (4 * MINUTES)
 #define PUMP_LOCKOUT_TIME_S (15 * MINUTES)
 #else
-#define PUMP_RUN_TIME_S (4 * MINUTES)
-#define PUMP_LOCKOUT_TIME_S (30)
+#define PUMP_RUN_TIME_S (5)
+#define PUMP_LOCKOUT_TIME_S (5)
 #endif
 unsigned int pump_countdown_timer = 0;
 unsigned int pump_lockout_timer = PUMP_LOCKOUT_TIME_S;
@@ -95,7 +106,7 @@ char time_buf[BUF_LEN];
 #define LOCK_LED        V2
 #define LOCAL_IP        V4
 #define LOCAL_TCP_PORT  V5
-#define INDIGO_IP       V6
+#define MQTT_IP       V6
 #define BLYNK_LOCKOUT   V7
 #define LOCK_OVERRIDE   V8
 #define TERMINAL        V10
@@ -116,7 +127,7 @@ void pump_unlock(){
   pump_lockout_timer = 0;
   Serial.println("Pump unlocked");
   Blynk.virtualWrite(LOCK_LED, 0);
-  send_status_to_indigo("PUMP_UNLOCK");
+  send_status_to_mqtt("PUMP_UNLOCK");
 }
 
 void pump_on(){
@@ -131,7 +142,7 @@ static int on_count;
   digitalWrite(RELAYN_PIN, HIGH);
   Blynk.virtualWrite(BLYNK_LED, 1023);
   Serial.println("Pump starting");
-  send_status_to_indigo("PUMP_ON");
+  send_status_to_mqtt("PUMP_ON");
 }
 
 void pump_off(){
@@ -145,7 +156,7 @@ void pump_off(){
   Blynk.virtualWrite(BLYNK_LED, 0);
   Serial.println("Pump off");
   pump_lock();
-  send_status_to_indigo("PUMP_OFF");
+  send_status_to_mqtt("PUMP_OFF");
 }
 /////////////////////// Timer Routines ////////////////////////
 void pump_start() {
@@ -187,73 +198,36 @@ void pump_countdown(){
 
 /////////////////  Network UDP ///////////////////
 #if 1
-String cmd_parse(String packetBuffer){
-    Serial.println("Contents:");
-    Serial.print("\"");
-    Serial.print(packetBuffer);
-    Serial.println("\"");
+void mqtt_sub_callback(char* topic, byte* msg, unsigned int length) {
+    char cmsg[32];
+    strncpy(cmsg, reinterpret_cast<char*>(msg), min(32, length));
+    Serial.println("topic: ");
+    Serial.print(topic);
+    Serial.print(", value: ");
+    Serial.println(cmsg);
 
-    if (strncmp("PUMP_ON", packetBuffer.c_str(), 7) == 0) {
-      pump_start();
-      return String("Pump On");
+    if (strcmp(MQTT_PUMP_CMD, topic) == 0) {
+        if (strncmp("RUN", cmsg, length) == 0) {
+            pump_start();
+        }
     }
-
-    return String("Unknown Cmd");
 }
 #endif
 
 ///////////////// Network TCP Server/////////////////////////////////
-#define INDIGO_PORT 2390
-WiFiServer server(INDIGO_PORT);
-WiFiClient client;
 #define CLIENT_TIMEOUT (10 * MSEC_PER_SEC)
 long client_wdt;
 
-void tcp_run() {
-  if (!client.connected()) {
-    client = server.available();
-    client_wdt = CLIENT_TIMEOUT;
-  }
 
-  if (!client) {
-    return;
-  }
-
-  if (!client.available()) {
-    if (client_wdt == 0) {
-      client.stop();
-    } else {
-      client_wdt--;
-      delay(1); // Delay 1ms
-    }
-    return;
-  } 
-
-  Serial.println("new client");
-
-  String req = client.readStringUntil('\r');
-  Serial.println(req);
-  client.flush();
-
-  String s = cmd_parse(req);
-
-  client.print(s);
-  client.stop(); // Terminate the client
-}
-
-///////////////// Network TCP Client/////////////////////////////////
+///////////////// MQTT Client/////////////////////////////////
 // Used to send status to the Indigo Server
-WiFiClient indigo_client;
-IPAddress indigo_server(192,168,2,14);
-
-void send_status_to_indigo(const char *s) {
-  indigo_client.stop();
-
-  if (indigo_client.connect(indigo_server, INDIGO_PORT)) {
-    indigo_client.println(s);
-  }
-  
-  indigo_client.stop();
+char last_status[32];
+void send_status_to_mqtt(const char *s) {
+  strncpy(last_status, s, 32);
+  mqtt_publish_topic(MQTT_PUMP_STATUS, s);
+}
+void send_last_status_to_mqtt() {
+  mqtt_publish_topic(MQTT_PUMP_STATUS, last_status);
 }
 
 /////////////////////// Blynk Routines ////////////////////////
@@ -294,6 +268,7 @@ void iosNotify(char *s) {
 }
 
 
+#if 0
 BLYNK_READ(LOCAL_IP) //Function to display the local IP address
 {
     char myIpString[24];
@@ -302,18 +277,19 @@ BLYNK_READ(LOCAL_IP) //Function to display the local IP address
     Blynk.virtualWrite(LOCAL_IP, myIpString);
 }
 
-BLYNK_READ(INDIGO_IP) //Function to display the local IP address
+BLYNK_READ(MQTT_IP) //Function to display the local IP address
 {
     char myIpString[24];
-    IPAddress myIp = indigo_server;
+    IPAddress myIp = mqtt_server;
     sprintf(myIpString, "%d.%d.%d.%d", myIp[0], myIp[1], myIp[2], myIp[3]);
-    Blynk.virtualWrite(INDIGO_IP, myIpString);
+    Blynk.virtualWrite(MQTT_IP, myIpString);
 }
 
 BLYNK_READ(LOCAL_TCP_PORT) //Function to display the local IP address
 {
     Blynk.virtualWrite(LOCAL_TCP_PORT, INDIGO_PORT);
 }
+#endif
 
 BLYNK_READ(BLYNK_LOCKOUT) //Function to display the local IP address
 {
@@ -344,7 +320,6 @@ void setup()
   // Initialize the LED and Relay pins
   pinMode(LED_PIN, OUTPUT);
   pinMode(RELAYN_PIN, OUTPUT);
-  pump_off();
 
   Blynk.begin(auth, WIFI_SSID, WIFI_KEY);
 
@@ -355,13 +330,12 @@ void setup()
     delay(1000);
   }
 
-    char myIpString[24];
-    IPAddress myIp = WiFi.localIP();
-    sprintf(myIpString, "%d.%d.%d.%d", myIp[0], myIp[1], myIp[2], myIp[3]);
-    Blynk.virtualWrite(LOCAL_IP, myIpString);
+  Serial.println("Blynk connected");
 
-  // Set lock after Blynk is online
-  pump_lock();
+  char myIpString[24];
+  IPAddress myIp = WiFi.localIP();
+  sprintf(myIpString, "%d.%d.%d.%d", myIp[0], myIp[1], myIp[2], myIp[3]);
+  Blynk.virtualWrite(LOCAL_IP, myIpString);
 
   terminal.printf("\nBlynk Ready\n");
   terminal.flush();
@@ -378,19 +352,20 @@ void setup()
   Serial.printf("Set 1 sec fsm interval\n");
   timer.setInterval(PUMP_FSM_INTERVAL_S, pump_countdown); 
 
-  // Udp.begin(localPort);
-  server.begin();
-  Serial.println("Server started");
-  terminal.printf("TCP Ready\n");
-  terminal.flush();
+  //mqtt setup
+  mqtt_setup();
+
+  // Set lock after Blynk is online
+  pump_off();
+  pump_lock();
 }
 
 void loop()
 {
-  tcp_run();
   Blynk.run();
   timer.run();
   ArduinoOTA.handle();
   //pump_run();
+  mqtt_run();
 }
 
