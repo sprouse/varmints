@@ -16,6 +16,7 @@
 **************************************************************/
 
 #define BLYNK_PRINT Serial // Comment this out to disable prints and save space
+#define MQTT_SOCKET_TIMEOUT 1
 #include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
@@ -179,6 +180,10 @@ void set_event_time(uint8_t op) {
   snprintf(buf, 64, "%d.%d %02d:%02d:%02d", month(),
                 day(), hour(), minute(), second());
   setLCD(op, buf);
+
+  char topic[32];
+  snprintf(topic, 32, "home/garage/time_%d", op);
+  mqtt_publish_topic(topic, buf);
 }
 
 void gate_open_wdt_expired() {
@@ -252,7 +257,7 @@ void monitor_timer(){
 ////////////// Setup /////////////////////
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
     Serial.print("\nStarting\n");
     Blynk.begin(auth, WIFI_SSID, WIFI_KEY);
 

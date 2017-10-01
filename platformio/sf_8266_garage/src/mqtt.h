@@ -10,37 +10,43 @@ long lastMsg = 0;
 char msg[50];
 int value = 0;
 
-void reconnect() {
+#define MQTT_RETRY_INTERVAL 60
+unsigned long last_attempt = 0;
+bool reconnect() {
+
+  if ((millis() - last_attempt) < MQTT_RETRY_INTERVAL * 1000L){
+    return false;
+  }
   // Loop until we're reconnected
-  while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
     if (client.connect("ESP8266Client")) {
       Serial.println("connected");
-      // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
-      // ... and resubscribe
-      client.subscribe("inTopic");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
+      Serial.print(" try again in ");
+      Serial.print(MQTT_RETRY_INTERVAL);
+      Serial.println(" seconds." );
+      last_attempt = millis();
+      return false;
     }
-  }
+  return true;
 }
 
-void mqtt_publish_garage_status(const char *status){
+void mqtt_publish_topic(const char *topic, const char *status){
   if (!client.connected()) {
     Serial.println("Connect to MQTT");
-    reconnect();
+    if (!reconnect()) {
+        return;
+    }
   }
   client.loop();
 
-  Serial.print("home/garage/door = ");
+  Serial.print(topic);
+  Serial.print(" = ");
   Serial.println(status);
-  client.publish("home/garage/door", status);
+  client.publish(topic, status, true);
 }
 
 void mqtt_setup(){
@@ -49,7 +55,9 @@ void mqtt_setup(){
 
 void mqtt_run(){
   if (!client.connected()) {
-    reconnect();
+    if (!reconnect()) {
+        return;
+    }
   }
   client.loop();
 
