@@ -16,6 +16,12 @@
 **************************************************************/
 
 #define BLYNK_PRINT Serial // Comment this out to disable prints and save space
+
+// MQTT reconnect is non-blocking. We shorten
+// the default MQTT timeout so that the WDT won't be tripped.
+// Should be ok with the MQTT server on the local network.
+#define MQTT_SOCKET_TIMEOUT 2
+
 #include <ArduinoOTA.h>
 #include <BlynkSimpleEsp8266.h>
 #include <ESP8266WiFi.h>
@@ -331,6 +337,8 @@ void setup()
   }
 
   Serial.println("Blynk connected");
+  Serial.print("MQTT TIMEOUT: ");
+  Serial.println(MQTT_SOCKET_TIMEOUT);
 
   char myIpString[24];
   IPAddress myIp = WiFi.localIP();

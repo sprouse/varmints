@@ -8,9 +8,14 @@ long lastMsg = 0;
 char msg[50];
 int value = 0;
 
-void reconnect() {
+unsigned long last_attempt = 0;
+bool reconnect() {
   // Loop until we're reconnected
-  while (!ps_client.connected()) {
+  if ((millis() - last_attempt) < 30000) {
+      return false;
+  }
+//  while (!ps_client.connected()) {
+
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
     if (ps_client.connect("ESP8266_Pump")) {
@@ -21,24 +26,29 @@ void reconnect() {
     } else {
       Serial.print("failed, rc=");
       Serial.print(ps_client.state());
-      Serial.println(" try again in 5 seconds");
+      Serial.println(" try again in 30 seconds");
       // Wait 5 seconds before retrying
-      delay(5000);
+      last_attempt = millis();
+      return false;
+      // delay(5000);
     }
-  }
+ // }
+    return true;
 }
 
 void mqtt_publish_topic(const char *topic, const char *status){
   if (!ps_client.connected()) {
     Serial.println("Connect to MQTT");
-    reconnect();
+    if (!reconnect()){
+        return;
+    }
   }
   ps_client.loop();
 
   Serial.print(topic);
   Serial.print(" = ");
   Serial.println(status);
-  ps_client.publish(topic, status);
+  ps_client.publish(topic, status, true);
 }
 
 void mqtt_setup(){
@@ -48,7 +58,9 @@ void mqtt_setup(){
 
 void mqtt_run(){
   if (!ps_client.connected()) {
-    reconnect();
+    if (!reconnect()) {
+      return;
+    }
   }
   ps_client.loop();
 }
